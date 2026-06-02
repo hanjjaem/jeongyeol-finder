@@ -14,6 +14,8 @@ type Result = {
   note?: string;
 };
 
+const EXAMPLES = ["경미한 출장보고", "3천만원 공사 집행", "병가", "예산 변경", "표창 추천"];
+
 export default function Home() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -22,9 +24,10 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [chosen, setChosen] = useState<number | null>(null);
 
-  async function search() {
-    const text = query.trim();
+  async function search(q?: string) {
+    const text = (q ?? query).trim();
     if (!text || loading) return;
+    if (q) setQuery(q);
     setOpen(true);
     setLoading(true);
     setError(null);
@@ -82,10 +85,18 @@ export default function Home() {
               placeholder="예: 경미한 출장보고, 3천만원 공사, 병가"
               aria-label="업무 입력"
             />
-            <button onClick={search} disabled={loading}>
+            <button onClick={() => search()} disabled={loading}>
               {loading ? "검색 중…" : "검색"}
             </button>
           </div>
+        </div>
+
+        <div className="examples">
+          {EXAMPLES.map((ex) => (
+            <button className="ex" key={ex} onClick={() => search(ex)} disabled={loading}>
+              {ex}
+            </button>
+          ))}
         </div>
       </main>
 
