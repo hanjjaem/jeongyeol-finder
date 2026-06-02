@@ -15,6 +15,7 @@ export function buildAnthropicParams(system: string, messages: ChatMessage[], mo
 export function buildOpenAIParams(system: string, messages: ChatMessage[], model: string) {
   return {
     model,
+    response_format: { type: "json_object" as const },
     messages: [{ role: "system" as const, content: system }, ...messages],
   };
 }
