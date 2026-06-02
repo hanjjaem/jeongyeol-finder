@@ -155,7 +155,7 @@ body::before{
   display:flex;align-items:center;justify-content:center;
   min-height:90px;
   background:#fff;border:1px solid #eef1f6;border-radius:16px;
-  padding:16px;
+  padding:42px 16px 16px;
   box-shadow:0 8px 24px rgba(31,56,88,.05);
   text-align:center;
 }
