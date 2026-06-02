@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -10,12 +10,42 @@ const EXAMPLES = [
   "예산 변경 결재 누구한테?",
 ];
 
+function renderRich(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
+    p.startsWith("**") && p.endsWith("**") ? (
+      <strong key={i}>{p.slice(2, -2)}</strong>
+    ) : (
+      <span key={i}>{p}</span>
+    )
+  );
+}
+
 export default function Home() {
   const [messages, setMessages] = useState<Msg[]>([
     { role: "assistant", content: "안녕하세요. 어떤 업무의 전결권자를 찾으세요? 아래 예시를 눌러보거나 직접 입력하세요." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const threadRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    const t = (document.documentElement.getAttribute("data-theme") as "light" | "dark") || "light";
+    setTheme(t);
+  }, []);
+
+  useEffect(() => {
+    threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, loading]);
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("theme", next); } catch {}
+  }
 
   async function send(textArg?: string) {
     const text = (textArg ?? input).trim();
@@ -26,7 +56,8 @@ export default function Home() {
     setLoading(true);
     try {
       const res = await fetch("/api/chat", {
-        method: "POST", headers: { "content-type": "application/json" },
+        method: "POST",
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({ messages: next }),
       });
       const json = await res.json();
@@ -40,52 +71,85 @@ export default function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 680, margin: "0 auto", padding: 16, minHeight: "90vh", display: "flex", flexDirection: "column" }}>
-      <h1 style={{ fontSize: 20, marginBottom: 4 }}>동구 전결 도우미</h1>
-      <p style={{ margin: "0 0 8px", color: "#555", fontSize: 14 }}>
-        위임전결규정을 바탕으로 <b>“내가 이 업무를 할 때 누구에게 전결(결재)받는지”</b>를 안내합니다.
+    <main className="shell">
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand__mark">전</div>
+          <div>
+            <div className="brand__title">동구 전결 도우미</div>
+            <div className="brand__sub">위임전결규정 안내</div>
+          </div>
+        </div>
+        <button className="theme-btn" onClick={toggleTheme} aria-label="테마 전환">
+          {mounted && (theme === "dark" ? <MoonIcon /> : <SunIcon />)}
+        </button>
+      </header>
+
+      <p className="lead">
+        이 업무, <b>누구에게 전결받지?</b>
+        <br />
+        <span className="lead__hint">위임전결규정을 바탕으로 결재 받을 사람을 알려드려요.</span>
       </p>
 
-      <details style={{ marginBottom: 10, fontSize: 13, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px" }}>
-        <summary style={{ cursor: "pointer", color: "#2563eb" }}>사용법 · 안내 보기</summary>
-        <div style={{ marginTop: 8, color: "#444", lineHeight: 1.6 }}>
-          <p style={{ margin: "4px 0" }}><b>무엇을 묻나요?</b> 처리하려는 업무를 자연스럽게 입력하세요(예: 휴가, 출장보고, 공사 집행, 예산 변경, 표창 추천).</p>
-          <p style={{ margin: "4px 0" }}><b>되물을 수 있어요.</b> 금액·직급·중요도에 따라 전결권자가 갈리는 업무는 “금액이 얼마인가요?”처럼 한 번 더 물을 수 있습니다.</p>
-          <p style={{ margin: "4px 0" }}><b>데이터 범위.</b> 동구 위임전결규정 169개 항목 기반입니다. 규정에 없는 사항은 “원문 미규정”으로 안내합니다.</p>
-          <p style={{ margin: "4px 0", color: "#b45309" }}><b>주의.</b> 참고용 안내입니다. 최종 확인은 원규정·담당부서에 하세요.</p>
+      <details className="guide">
+        <summary>사용법 · 안내</summary>
+        <div className="guide__body">
+          <p><b>무엇을 묻나요?</b> 처리하려는 업무를 자연스럽게 입력하세요(예: 휴가, 출장보고, 공사 집행, 예산 변경, 표창 추천).</p>
+          <p><b>되물을 수 있어요.</b> 금액·직급·중요도에 따라 갈리는 업무는 “금액이 얼마인가요?”처럼 한 번 더 물을 수 있습니다.</p>
+          <p><b>데이터 범위.</b> 동구 위임전결규정 169개 항목 기반. 규정에 없으면 “원문 미규정”으로 안내합니다.</p>
+          <p className="warn"><b>주의.</b> 참고용 안내입니다. 최종 확인은 원규정·담당부서에 하세요.</p>
         </div>
       </details>
 
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, padding: "8px 0" }}>
+      <div className="thread" ref={threadRef}>
         {messages.map((m, i) => (
-          <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%",
-            background: m.role === "user" ? "#2563eb" : "#fff", color: m.role === "user" ? "#fff" : "#1a1a1a",
-            border: "1px solid #e5e7eb", borderRadius: 12, padding: "8px 12px", whiteSpace: "pre-wrap" }}>
-            {m.content}
+          <div key={i} className={m.role === "user" ? "msg msg--user" : "msg msg--bot"}>
+            {m.role === "assistant" ? renderRich(m.content) : m.content}
           </div>
         ))}
-        {loading && <div style={{ color: "#888", fontSize: 13 }}>답변 작성 중…</div>}
+        {loading && (
+          <div className="typing" aria-label="답변 작성 중">
+            <i /><i /><i />
+          </div>
+        )}
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "8px 0" }}>
+      <div className="chips">
         {EXAMPLES.map((ex) => (
-          <button key={ex} onClick={() => send(ex)} disabled={loading}
-            style={{ fontSize: 12, color: "#2563eb", background: "#eef2ff", border: "1px solid #c7d2fe",
-              borderRadius: 999, padding: "5px 10px", cursor: "pointer" }}>
+          <button key={ex} className="chip" onClick={() => send(ex)} disabled={loading}>
             {ex}
           </button>
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <input value={input} onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()} placeholder="업무를 입력하세요"
-          style={{ flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #d1d5db" }} />
-        <button onClick={() => send()} disabled={loading}
-          style={{ padding: "10px 16px", borderRadius: 8, border: 0, background: "#2563eb", color: "#fff", cursor: "pointer" }}>
-          전송
-        </button>
+      <div className="composer">
+        <input
+          className="field"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && send()}
+          placeholder="업무를 입력하세요"
+        />
+        <button className="send" onClick={() => send()} disabled={loading}>전송</button>
       </div>
+
+      <p className="foot">위임전결규정 기반 참고용입니다. 최종 확인은 원규정/담당부서.</p>
     </main>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </svg>
+  );
+}
+function MoonIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+    </svg>
   );
 }
