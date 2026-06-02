@@ -17,7 +17,7 @@ describe("resolveLocal — 로컬에서 즉시 처리(정확/명확한 경우)",
     const res = r("병가");
     expect(res?.found).toBe(true);
     expect(res?.needsChoice).toBe(true);
-    expect(res?.question).toBe("당신의 직급을 알려주세요");
+    expect(res?.question).toBe("기안자의 직급을 알려주세요");
     const labels = res?.options.map((o) => o.label) ?? [];
     // 공통 '1일 이상'과 '(N)' 번호가 빠지고 직급만 남는다
     expect(labels.every((l) => !l.includes("1일"))).toBe(true);

@@ -96,7 +96,7 @@ function buildResult(it: Item, query: string): Result {
   if (branch === "기간+직급") {
     question = options.some((o) => /\d\s*일/.test(o.label))
       ? "기간·직급을 알려주세요"
-      : "당신의 직급을 알려주세요";
+      : "기안자의 직급을 알려주세요";
   }
 
   return {

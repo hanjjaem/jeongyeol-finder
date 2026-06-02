@@ -85,12 +85,14 @@ export default function Home() {
 
         <div className="search-card">
           <input
+            className={query ? undefined : "is-empty"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && search()}
             placeholder="예: 경미한 출장보고, 3천만원 공사"
             aria-label="업무 입력"
           />
+          {!query && <span className="caret" aria-hidden />}
           <button className="go" onClick={() => search()} disabled={loading} aria-label="검색">
             <SearchIcon />
             <span className="go__label">{loading ? "검색 중…" : "검색"}</span>
