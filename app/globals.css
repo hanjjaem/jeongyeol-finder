@@ -80,9 +80,9 @@ h1 span{
 }
 .search-row input::placeholder{color:#b7c0cd;font-weight:700;font-size:19px}
 .search-row button{
-  height:92px;min-width:150px;border:0;border-radius:24px;color:#fff;
+  height:92px;min-width:170px;border:0;border-radius:26px;color:#fff;
   background:linear-gradient(135deg,#2563eb,#7c3aed);
-  font-size:18px;font-weight:900;letter-spacing:-.03em;cursor:pointer;
+  font-size:22px;font-weight:900;letter-spacing:-.03em;cursor:pointer;
   box-shadow:0 18px 34px rgba(89,87,255,.28);
   transition:transform .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
