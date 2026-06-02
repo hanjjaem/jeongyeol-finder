@@ -20,7 +20,7 @@ type Result = {
   note?: string;
 };
 
-const EXAMPLES = ["병가", "경미한 출장보고", "예산의 변경", "관내출장", "표창 추천"];
+const EXAMPLES = ["병가", "경미한 출장보고", "예산의 변경", "관내출장"];
 
 export default function Home() {
   const [query, setQuery] = useState("");
