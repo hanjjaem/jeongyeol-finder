@@ -2,7 +2,7 @@
 
 부산 동구청 **위임전결규정(169개 항목)** 을 자연어로 검색해, *"내가 이 업무를 할 때 누구에게 전결(결재)받는지"* 를 알려주는 웹앱입니다. 채팅이 아니라 **검색창 하나 → 결과 모달** 방식.
 
-라이브: https://jeonjyeol-chatbot.vercel.app
+라이브: https://jeongyeol-finder.vercel.app
 
 ---
 
@@ -65,7 +65,7 @@ data/...통합.csv         검색테이블(169행)
 ```bash
 npm install
 cp .env.example .env.local   # 키 채우기
-npm run dev                  # http://localhost:3000
+npm run dev                  # http://localhost:8000
 ```
 
 ## 환경변수

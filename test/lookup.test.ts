@@ -27,12 +27,19 @@ describe("extractJson", () => {
 
 describe("POST /api/lookup", () => {
   beforeEach(() => vi.clearAllMocks());
-  it("query를 받아 구조화 결과를 반환한다", async () => {
-    const res = await POST(req({ query: "예산 변경 누구 전결?" }));
+  it("로컬에서 못 풀면 LLM 폴백으로 구조화 결과를 반환한다", async () => {
+    const res = await POST(req({ query: "도무지모르겠는 xyz123 질의" }));
     expect(res.status).toBe(200);
     const json = await res.json();
+    expect(json.source).toBe("llm");
     expect(json.result.approver).toBe("국·소장");
-    expect(json.result.found).toBe(true);
+  });
+  it("정확히 일치하면 로컬에서 처리하고 LLM을 호출하지 않는다", async () => {
+    const res = await POST(req({ query: "예산의 변경" }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.source).toBe("local");
+    expect(json.result.approver).toBe("국·소장");
   });
   it("query가 없으면 400", async () => {
     const res = await POST(req({}));

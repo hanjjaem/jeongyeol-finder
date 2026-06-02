@@ -43,7 +43,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 8000",
     "build": "next build",
     "start": "next start",
     "test": "vitest run"
@@ -621,7 +621,7 @@ OPENAI_MODEL=gpt-4o
 ```bash
 npm install
 cp .env.example .env.local   # 키 채우기
-npm run dev                  # http://localhost:3000
+npm run dev                  # http://localhost:8000
 ```
 
 ## 환경변수

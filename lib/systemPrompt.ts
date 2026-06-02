@@ -9,7 +9,7 @@ export function buildSystemPrompt(tableText: string): string {
   "needsChoice": boolean,  // 금액·직급·중요도 등으로 전결권자가 갈리는가
   "question": string,      // needsChoice일 때 사용자에게 물을 한 문장(예: "금액이 얼마인가요?")
   "options": [             // needsChoice일 때 각 분기와 그 전결권자
-    { "label": string, "approver": string, "note": string }
+    { "label": string, "approver": string, "drafter": string, "note": string }
   ],
   "approver": string,      // needsChoice=false일 때의 전결권자(예: "국·소장")
   "drafter": string,       // 기안(상신)하는 직급
