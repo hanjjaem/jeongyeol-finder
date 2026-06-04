@@ -184,25 +184,34 @@ export default function Home() {
               <button className="close" onClick={() => setKeyOpen(false)} aria-label="닫기">×</button>
             </div>
             <div className="modal-body" style={{ textAlign: "left" }}>
-              <div
-                style={{
-                  fontSize: 14,
-                  color: "#475569",
-                  lineHeight: 1.7,
-                  margin: "4px 0 16px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 2,
-                }}
-              >
-                <span>
-                  원문(표)에 없는 <b>모호한&nbsp;질문</b>은 LLM(Claude·GPT·Gemini&nbsp;중&nbsp;하나)을
-                  호출합니다.
-                </span>
-                <span>
-                  사용하려면 아래에서 <b>본인&nbsp;API&nbsp;키</b>를 발급받아 입력하세요.
-                </span>
-                <span style={{ color: "#94a3b8" }}>요금은 본인&nbsp;키로 청구됩니다.</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, margin: "6px 0 16px" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "0 0 auto", marginTop: 2 }}>
+                    <path d="M12 3l1.8 4.4L18.2 9.2l-4.4 1.8L12 15.4l-1.8-4.4L5.8 9.2l4.4-1.8z" />
+                  </svg>
+                  <span style={{ fontSize: 13.5, color: "#475569", lineHeight: 1.5 }}>
+                    표에 없는 <b>모호한 질문</b>은 LLM(Claude·GPT·Gemini)이 답해요
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "0 0 auto", marginTop: 2 }}>
+                    <circle cx="8.5" cy="14.5" r="4" />
+                    <path d="M11.3 11.7 20 3" />
+                    <path d="M17 3l3 3M15.5 5.5l2 2" />
+                  </svg>
+                  <span style={{ fontSize: 13.5, color: "#475569", lineHeight: 1.5 }}>
+                    <b>본인 API 키</b>가 필요해요 — 아래에서 발급·입력
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "0 0 auto", marginTop: 2 }}>
+                    <rect x="3" y="6" width="18" height="13" rx="2" />
+                    <path d="M3 10h18" />
+                  </svg>
+                  <span style={{ fontSize: 13.5, color: "#94a3b8", lineHeight: 1.5 }}>
+                    요금은 본인 키로 청구돼요
+                  </span>
+                </div>
               </div>
 
               <div
