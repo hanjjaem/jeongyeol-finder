@@ -24,7 +24,7 @@
 - **감사 안전** — 표에 있는 것만 답, 지어내지 않음
 
 **스택** · Next.js 14 · TypeScript · Vercel<br>
-**LLM** · Claude / OpenAI 전환 (`LLM_PROVIDER`)
+**LLM** · Claude / OpenAI / Gemini (BYOK · 사용자 키로 호출)
 
 ---
 
@@ -46,13 +46,14 @@
 
 ### 3) 처리 흐름
 ```
-브라우저: 업무명 입력 → 검색
+브라우저: 업무명 입력 → 검색  (헤더 x-llm-key: 사용자 본인 키, BYOK)
    │  POST /api/lookup  { query }
    ▼
-Next.js 서버 (Vercel) ── API 키 보관
+Next.js 서버 (Vercel) ── 표로 풀리면 즉시 응답(무료). 못 풀리면 ↓
+   │  사용자 키 없으면 401 needsKey. 있으면:
    │  시스템 프롬프트 = [근거 규칙] + [표 169행 전체]
    ▼
-LLM (Claude/OpenAI)  →  구조화 JSON 반환
+LLM (Claude/OpenAI, 사용자 키로 호출)  →  구조화 JSON 반환
    │  { found, approver, drafter, reason, note,
    │    needsChoice, question, options:[{label, approver}] }
    ▼
@@ -69,7 +70,7 @@ LLM (Claude/OpenAI)  →  구조화 JSON 반환
 
 ## 기술 스택 / 구조
 - **Next.js 14 (App Router) + TypeScript**, 배포 **Vercel**(GitHub push 자동배포)
-- LLM: **Claude(Anthropic) / OpenAI 둘 다 지원**, `LLM_PROVIDER` 환경변수로 전환
+- LLM: **Claude(Anthropic) / OpenAI / Gemini 지원**, 사용자 키 접두로 자동 판별(BYOK)
 
 ```
 app/page.tsx             검색 UI + 결과 모달(분기 되물음)
@@ -86,14 +87,19 @@ data/...통합.csv         검색테이블(169행)
 ## 로컬 실행
 ```bash
 npm install
-cp .env.example .env.local   # 키 채우기
+cp .env.example .env.local   # (선택) 모델명만. LLM 키는 앱에서 입력(BYOK)
 npm run dev                  # http://localhost:8000
 ```
 
 ## 환경변수
-- `LLM_PROVIDER`: `anthropic` 또는 `openai`
-- `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`: 선택한 제공자 키
 - `ANTHROPIC_MODEL`(기본 claude-sonnet-4-6) / `OPENAI_MODEL`(기본 gpt-4o)
+- **LLM API 키는 서버에 두지 않습니다(BYOK).** 사용자가 앱에서 입력한 키로 호출합니다.
+
+## 비용 보호 (BYOK — Bring Your Own Key)
+**표(169행)로 풀리는 검색은 키 없이 누구나** 무료로 씁니다. 표에서 못 풀려 **LLM 호출이 필요한 모호한 질문일 때만** 사용자 본인 API 키를 요구합니다 — 그 키로 호출되므로 **요금은 사용자에게 청구**되고, **운영자(서버) 키는 한 푼도 안 나갑니다.**
+- 키는 **브라우저 `localStorage`에만** 저장. 검색 시 `x-llm-key` 헤더로 전송하며 **서버는 저장·로깅하지 않습니다.**
+- 제공자는 키 접두로 자동 판별: `sk-ant-…` → Anthropic, `AIza…` → Gemini, 그 외 → OpenAI.
+- 키 없이 LLM이 필요한 질문을 하면 `401 { needsKey: true }` → 결과창에서 "🔑 API 키 입력" 안내.
 
 ## 배포 (Vercel + GitHub 자동배포)
 GitHub에 push → Vercel 프로젝트가 자동 빌드·배포. 환경변수는 Vercel Settings에 등록.
