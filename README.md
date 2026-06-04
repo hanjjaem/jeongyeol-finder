@@ -15,14 +15,9 @@
 
 > 부산 동구청 **위임전결규정(169개 항목)** 을 자연어로 검색해, *"이 업무는 누구에게 전결(결재)받지?"* 를 알려주는 웹앱. 채팅이 아니라 **검색창 하나 → 결과 모달** 방식.
 
-<table>
-<tr>
-<td width="40%" valign="top">
-
-<img src="public/demo.gif" alt="업무 검색 → 결과 모달에서 전결권자 확인" width="320">
-
-</td>
-<td valign="top">
+<p align="center">
+  <img src="public/demo.gif" alt="업무 검색 → 결과 모달에서 전결권자 확인" width="320">
+</p>
 
 #### ⚡ 한눈에
 
@@ -32,10 +27,6 @@
 
 **스택** · Next.js 14 · TypeScript · Vercel<br>
 **LLM** · Claude / OpenAI 전환 (`LLM_PROVIDER`)
-
-</td>
-</tr>
-</table>
 
 ---
 
