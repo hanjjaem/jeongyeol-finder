@@ -8,6 +8,10 @@
   <a href="https://jeongyeol-finder.vercel.app"><b>▶ 라이브 데모 — jeongyeol-finder.vercel.app</b></a>
 </p>
 
+<p align="center">
+  <img src="public/demo.gif" alt="업무 검색 → 결과 모달에서 전결권자 확인 사용 플로우" width="360">
+</p>
+
 # 결재자를 단순하게
 
 부산 동구청 **위임전결규정(169개 항목)** 을 자연어로 검색해, *"내가 이 업무를 할 때 누구에게 전결(결재)받는지"* 를 알려주는 웹앱입니다. 채팅이 아니라 **검색창 하나 → 결과 모달** 방식.
