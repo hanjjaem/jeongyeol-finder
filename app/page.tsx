@@ -196,10 +196,12 @@ export default function Home() {
                 }}
               >
                 <span>
-                  표에 없는 <b>모호한&nbsp;질문</b>만 LLM이 답하며, 이때 <b>본인&nbsp;API&nbsp;키</b>로
-                  호출돼요.
+                  원문(표)에 없는 <b>모호한&nbsp;질문</b>은 LLM(Claude·GPT·Gemini&nbsp;중&nbsp;하나)을
+                  호출합니다.
                 </span>
-                <span>요금도 본인&nbsp;키로 청구됩니다.</span>
+                <span>
+                  사용하려면 아래에서 <b>본인&nbsp;API&nbsp;키</b>를 발급받아 입력하세요 — 요금은 본인&nbsp;키로 청구됩니다.
+                </span>
               </div>
 
               <div
