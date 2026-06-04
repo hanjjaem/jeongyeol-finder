@@ -1,22 +1,41 @@
 <p align="center">
   <a href="https://jeongyeol-finder.vercel.app">
-    <img src="public/poster.png" alt="결재자를 단순하게 — 위임전결규정을 자연어로 검색해 전결권자를 알려주는 웹앱" width="840">
+    <img src="public/poster.png" alt="결재자를 단순하게 — 위임전결규정을 자연어로 검색해 전결권자를 알려주는 웹앱" width="780">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://jeongyeol-finder.vercel.app"><b>▶ 라이브 데모 — jeongyeol-finder.vercel.app</b></a>
-</p>
-
-<p align="center">
-  <img src="public/demo.gif" alt="업무 검색 → 결과 모달에서 전결권자 확인 사용 플로우" width="360">
+  <a href="https://jeongyeol-finder.vercel.app"><img src="https://img.shields.io/badge/Live_Demo-jeongyeol--finder.vercel.app-2563eb?style=flat-square" alt="Live Demo"></a>
+  <img src="https://img.shields.io/badge/Next.js-14-000?style=flat-square&logo=nextdotjs" alt="Next.js 14">
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Deploy-Vercel-000?style=flat-square&logo=vercel" alt="Vercel">
 </p>
 
 # 결재자를 단순하게
 
-부산 동구청 **위임전결규정(169개 항목)** 을 자연어로 검색해, *"내가 이 업무를 할 때 누구에게 전결(결재)받는지"* 를 알려주는 웹앱입니다. 채팅이 아니라 **검색창 하나 → 결과 모달** 방식.
+> 부산 동구청 **위임전결규정(169개 항목)** 을 자연어로 검색해, *"이 업무는 누구에게 전결(결재)받지?"* 를 알려주는 웹앱. 채팅이 아니라 **검색창 하나 → 결과 모달** 방식.
 
-라이브: https://jeongyeol-finder.vercel.app
+<table>
+<tr>
+<td width="40%" valign="top">
+
+<img src="public/demo.gif" alt="업무 검색 → 결과 모달에서 전결권자 확인" width="320">
+
+</td>
+<td valign="top">
+
+#### ⚡ 한눈에
+
+- 위임전결규정 **169항목** 을 자연어로 검색
+- **전결권자** 즉시 표시 + 별표2 원문 근거 함께
+- **감사 안전** — 표에 있는 것만 답, 지어내지 않음
+
+**스택** · Next.js 14 · TypeScript · Vercel<br>
+**LLM** · Claude / OpenAI 전환 (`LLM_PROVIDER`)
+
+</td>
+</tr>
+</table>
 
 ---
 
