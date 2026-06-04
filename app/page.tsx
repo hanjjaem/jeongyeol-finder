@@ -169,8 +169,18 @@ export default function Home() {
               <button className="close" onClick={() => setKeyOpen(false)} aria-label="닫기">×</button>
             </div>
             <div className="modal-body" style={{ textAlign: "left" }}>
-              <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, margin: "4px 0 16px" }}>
+              <p
+                style={{
+                  fontSize: 14,
+                  color: "#475569",
+                  lineHeight: 1.7,
+                  margin: "4px 0 16px",
+                  wordBreak: "keep-all",
+                  textWrap: "pretty",
+                }}
+              >
                 표에 없는 <b>모호한 질문</b>만 LLM이 답하며, 이때 <b>본인 API 키</b>로 호출돼요.
+                <br />
                 요금도 본인 키로 청구됩니다.
               </p>
 
