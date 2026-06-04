@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>jeongyeol-finder poster</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+<style>
+  :root{
+    --ink:#111827; --blue:#2563eb; --purple:#7c3aed;
+    --bg1:#fbfcff; --bg2:#f1f6ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1200px;height:630px;overflow:hidden}
+  body{
+    font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 10% 8%, rgba(52,120,246,.22), transparent 34%),
+      radial-gradient(circle at 92% 12%, rgba(184,92,246,.20), transparent 36%),
+      radial-gradient(circle at 78% 96%, rgba(219,39,119,.12), transparent 40%),
+      linear-gradient(145deg,var(--bg1) 0%, var(--bg2) 100%);
+    position:relative;
+  }
+  /* 미세 그리드 */
+  body::before{
+    content:"";position:absolute;inset:0;z-index:0;
+    background-image:
+      linear-gradient(rgba(16,35,63,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16,35,63,.04) 1px, transparent 1px);
+    background-size:42px 42px;
+    -webkit-mask-image:radial-gradient(circle at 50% 45%, black 0%, black 55%, transparent 92%);
+            mask-image:radial-gradient(circle at 50% 45%, black 0%, black 55%, transparent 92%);
+  }
+
+  .stage{position:relative;z-index:1;height:100%;display:flex;align-items:center;gap:56px;padding:0 76px}
+
+  /* ── 좌: 카피 ── */
+  .left{width:560px;flex:0 0 560px}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:34px}
+  .brand-mark{
+    width:46px;height:46px;border-radius:15px;display:grid;place-items:center;
+    color:#fff;font-weight:900;font-size:23px;letter-spacing:-.04em;
+    background:linear-gradient(135deg,var(--ink),#2563eb);
+    box-shadow:0 12px 28px rgba(52,120,246,.30);
+  }
+  .brand span{color:#263d5b;font-size:19px;font-weight:800;letter-spacing:-.02em}
+
+  .headline{
+    font-size:64px;line-height:1.06;letter-spacing:-.045em;font-weight:900;
+    background:linear-gradient(118deg,#0f55d8 0%, #3182f6 32%, #7c3aed 66%, #db2777 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .lede{margin-top:18px;color:#5f6c7e;font-size:19px;line-height:1.6;letter-spacing:-.025em}
+
+  .bullets{margin-top:30px;display:flex;flex-direction:column;gap:13px}
+  .bullet{display:flex;align-items:flex-start;gap:12px;color:#34465e;font-size:17px;font-weight:650;letter-spacing:-.02em;line-height:1.4}
+  .bullet .dot{
+    flex:0 0 auto;margin-top:2px;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-size:13px;font-weight:900;
+  }
+  .bullet b{font-weight:850;color:#1d2b41}
+
+  .url{margin-top:34px;display:inline-flex;align-items:center;gap:9px;color:#2563eb;font-size:18px;font-weight:850;letter-spacing:-.02em}
+  .url .live{
+    font-size:11px;font-weight:900;letter-spacing:.04em;color:#fff;
+    background:linear-gradient(135deg,#2563eb,#7c3aed);padding:4px 9px;border-radius:999px;
+  }
+
+  /* ── 우: 브라우저 목업 ── */
+  .right{flex:1 1 auto;display:flex;justify-content:center}
+  .browser{
+    width:430px;border-radius:22px;overflow:hidden;
+    background:rgba(255,255,255,.72);
+    border:1px solid rgba(255,255,255,.9);
+    box-shadow:0 40px 90px rgba(28,45,74,.22), 0 0 40px rgba(124,58,237,.14);
+    backdrop-filter:blur(22px);
+  }
+  .bbar{display:flex;align-items:center;gap:14px;padding:13px 16px;background:rgba(255,255,255,.66);border-bottom:1px solid rgba(17,24,39,.06)}
+  .dots{display:flex;gap:7px}
+  .dots i{width:11px;height:11px;border-radius:50%}
+  .dots i:nth-child(1){background:#ff5f57}
+  .dots i:nth-child(2){background:#febc2e}
+  .dots i:nth-child(3){background:#28c840}
+  .addr{
+    flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
+    height:30px;border-radius:9px;background:rgba(17,24,39,.05);
+    color:#64748b;font-size:13px;font-weight:700;letter-spacing:-.01em;
+  }
+  .addr svg{width:12px;height:12px;color:#94a3b8}
+
+  .screen{padding:40px 30px 44px;display:flex;flex-direction:column;align-items:center;text-align:center}
+  .mini-mark{
+    width:40px;height:40px;border-radius:13px;display:grid;place-items:center;
+    color:#fff;font-weight:900;font-size:20px;letter-spacing:-.04em;margin-bottom:18px;
+    background:linear-gradient(135deg,var(--ink),#2563eb);
+    box-shadow:0 10px 22px rgba(52,120,246,.28);
+  }
+  .mini-title{
+    font-size:46px;line-height:1.04;letter-spacing:-.05em;font-weight:900;
+    background:linear-gradient(118deg,#0f55d8 0%, #3182f6 34%, #7c3aed 68%, #db2777 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .mini-sub{margin-top:12px;color:#8a95a6;font-size:13px;line-height:1.6;letter-spacing:-.02em}
+
+  .mini-search{
+    position:relative;margin-top:24px;width:100%;
+    display:flex;align-items:center;gap:7px;padding:7px 7px 7px 14px;border-radius:16px;
+    background:#fff;
+    box-shadow:0 16px 40px rgba(28,45,74,.12), 0 0 18px rgba(91,90,255,.22);
+  }
+  .mini-search::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;padding:2px;
+    background:linear-gradient(120deg,#2563eb,#7c3aed,#db2777,#2563eb);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;
+  }
+  .mini-search .ph{flex:1;text-align:left;color:#aeb8c6;font-size:14px;font-weight:700;letter-spacing:-.02em}
+  .mini-search .go{
+    flex:0 0 auto;height:40px;display:inline-flex;align-items:center;gap:6px;padding:0 16px;
+    border-radius:11px;color:#fff;font-size:14px;font-weight:850;letter-spacing:-.02em;
+    background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 8px 18px rgba(89,87,255,.26);
+  }
+  .mini-search .go svg{width:15px;height:15px}
+
+  .chips{margin-top:16px;display:flex;flex-wrap:wrap;justify-content:center;gap:7px}
+  .chip{
+    border:1px solid rgba(17,24,39,.10);background:rgba(255,255,255,.7);color:#475569;
+    border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:800;letter-spacing:-.02em;
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="left">
+      <div class="brand">
+        <div class="brand-mark">결</div>
+        <span>결재자를 단순하게</span>
+      </div>
+
+      <div class="headline">누가 결재받지?<br/>검색 한 번이면 끝.</div>
+      <div class="lede">부산 동구청 위임전결규정을 자연어로 검색해<br/>결재(전결)받을 사람을 즉시 알려주는 웹앱.</div>
+
+      <div class="bullets">
+        <div class="bullet"><span class="dot">✓</span><span><b>위임전결규정 169항목</b>을 자연어로 검색</span></div>
+        <div class="bullet"><span class="dot">✓</span><span><b>전결권자 즉시 표시</b> + 별표2 원문 근거 함께</span></div>
+        <div class="bullet"><span class="dot">✓</span><span><b>감사 안전</b> — 표에 있는 것만 답, 지어내지 않음</span></div>
+      </div>
+
+      <div class="url"><span class="live">LIVE</span>jeongyeol-finder.vercel.app</div>
+    </div>
+
+    <div class="right">
+      <div class="browser">
+        <div class="bbar">
+          <div class="dots"><i></i><i></i><i></i></div>
+          <div class="addr">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            jeongyeol-finder.vercel.app
+          </div>
+        </div>
+        <div class="screen">
+          <div class="mini-mark">결</div>
+          <div class="mini-title">누가 결재?</div>
+          <div class="mini-sub">처리할 업무를 입력하면,<br/>전결받을 사람을 알려드려요.</div>
+          <div class="mini-search">
+            <span class="ph">예: 경미한 출장보고, 3천만원 공사</span>
+            <span class="go">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.2-4.2"/></svg>
+              검색
+            </span>
+          </div>
+          <div class="chips">
+            <span class="chip">병가</span>
+            <span class="chip">경미한 출장보고</span>
+            <span class="chip">예산의 변경</span>
+            <span class="chip">관내출장</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
