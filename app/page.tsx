@@ -200,8 +200,9 @@ export default function Home() {
                   호출합니다.
                 </span>
                 <span>
-                  사용하려면 아래에서 <b>본인&nbsp;API&nbsp;키</b>를 발급받아 입력하세요 — 요금은 본인&nbsp;키로 청구됩니다.
+                  사용하려면 아래에서 <b>본인&nbsp;API&nbsp;키</b>를 발급받아 입력하세요.
                 </span>
+                <span style={{ color: "#94a3b8" }}>요금은 본인&nbsp;키로 청구됩니다.</span>
               </div>
 
               <div
