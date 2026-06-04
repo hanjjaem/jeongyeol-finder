@@ -23,6 +23,12 @@ type Result = {
 const EXAMPLES = ["병가", "경미한 출장보고", "예산의 변경", "관내출장"];
 // 못 찾았을 때 제시할 '표에 실제로 있는' 항목(로컬로 풀려 키 없이 즉시 동작)
 const SUGGESTIONS = ["병가", "연가", "시간외근무", "예산의 변경", "관내출장"];
+// BYOK 지원 제공자 (키 입력 모달에서 안내)
+const PROVIDERS = [
+  { src: "/logos/claude.svg", label: "Claude", hint: "sk-ant-…" },
+  { src: "/logos/openai.svg", label: "OpenAI", hint: "sk-…" },
+  { src: "/logos/gemini.svg", label: "Gemini", hint: "AIza…" },
+];
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -163,39 +169,57 @@ export default function Home() {
               <button className="close" onClick={() => setKeyOpen(false)} aria-label="닫기">×</button>
             </div>
             <div className="modal-body" style={{ textAlign: "left" }}>
-              <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.75, margin: "6px 0 16px" }}>
-                표(169항목)로 풀리는 검색은 키 없이 됩니다. <b>모호한 질문</b>만 LLM이 답하는데, 이때
-                <b> 본인 API 키</b>로 호출됩니다(요금은 본인 키로 청구).
-                <br />
-                키는 <b>이 브라우저에만 저장</b>되고 서버에 저장·로깅하지 않습니다.
+              <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, margin: "4px 0 16px" }}>
+                표에 없는 <b>모호한 질문</b>만 LLM이 답하며, 이때 <b>본인 API 키</b>로 호출돼요.
+                요금도 본인 키로 청구됩니다.
               </p>
+
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
-                  flexWrap: "wrap",
-                  margin: "0 0 16px",
+                  border: "1px solid rgba(17,24,39,.08)",
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  marginBottom: 16,
                 }}
               >
-                {[
-                  { src: "/logos/claude.svg", label: "Claude", hint: "sk-ant-…" },
-                  { src: "/logos/openai.svg", label: "OpenAI", hint: "sk-…" },
-                  { src: "/logos/gemini.svg", label: "Gemini", hint: "AIza…" },
-                ].map((p) => (
-                  <span key={p.label} style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                {PROVIDERS.map((p, i) => (
+                  <div
+                    key={p.label}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "11px 14px",
+                      borderTop: i === 0 ? undefined : "1px solid rgba(17,24,39,.06)",
+                      background: "rgba(255,255,255,.45)",
+                    }}
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.src} alt={p.label} width={18} height={18} />
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#475569" }}>{p.label}</span>
-                    <code style={{ fontSize: 11, color: "#9aa6b6" }}>{p.hint}</code>
-                  </span>
+                    <img src={p.src} alt={p.label} width={18} height={18} style={{ flex: "0 0 auto" }} />
+                    <span style={{ flex: 1, fontSize: 13.5, fontWeight: 750, color: "#334155" }}>
+                      {p.label}
+                    </span>
+                    <code
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#64748b",
+                        background: "rgba(17,24,39,.05)",
+                        padding: "3px 9px",
+                        borderRadius: 7,
+                      }}
+                    >
+                      {p.hint}
+                    </code>
+                  </div>
                 ))}
               </div>
+
               <input
                 id="apikey-input"
                 type="password"
                 defaultValue={apiKey}
-                placeholder="sk-ant-… / sk-… / AIza…"
+                placeholder="키 붙여넣기 (sk-ant-… / sk-… / AIza…)"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     saveKey((e.target as HTMLInputElement).value);
@@ -207,12 +231,40 @@ export default function Home() {
                   padding: "13px 14px",
                   borderRadius: 12,
                   border: "1px solid rgba(17,24,39,.15)",
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: 600,
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                   outline: "none",
                 }}
               />
-              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  margin: "10px 2px 0",
+                  fontSize: 12,
+                  color: "#94a3b8",
+                  letterSpacing: "-.01em",
+                }}
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  style={{ flex: "0 0 auto" }}
+                >
+                  <rect x="5" y="11" width="14" height="9" rx="2" />
+                  <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                </svg>
+                키는 이 브라우저에만 저장돼요. 서버에 저장·로깅하지 않습니다.
+              </div>
+
+              <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
                 <button
                   onClick={() => {
                     const el = document.getElementById("apikey-input") as HTMLInputElement | null;
