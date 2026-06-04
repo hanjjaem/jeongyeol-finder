@@ -23,11 +23,26 @@ type Result = {
 const EXAMPLES = ["병가", "경미한 출장보고", "예산의 변경", "관내출장"];
 // 못 찾았을 때 제시할 '표에 실제로 있는' 항목(로컬로 풀려 키 없이 즉시 동작)
 const SUGGESTIONS = ["병가", "연가", "시간외근무", "예산의 변경", "관내출장"];
-// BYOK 지원 제공자 (키 입력 모달에서 안내)
+// BYOK 지원 제공자 (키 입력 모달에서 안내) + 키 발급 페이지
 const PROVIDERS = [
-  { src: "/logos/claude.svg", label: "Claude", hint: "sk-ant-…" },
-  { src: "/logos/openai.svg", label: "OpenAI", hint: "sk-…" },
-  { src: "/logos/gemini.svg", label: "Gemini", hint: "AIza…" },
+  {
+    src: "/logos/claude.svg",
+    label: "Claude",
+    hint: "sk-ant-…",
+    url: "https://console.anthropic.com/settings/keys",
+  },
+  {
+    src: "/logos/openai.svg",
+    label: "OpenAI",
+    hint: "sk-…",
+    url: "https://platform.openai.com/api-keys",
+  },
+  {
+    src: "/logos/gemini.svg",
+    label: "Gemini",
+    hint: "AIza…",
+    url: "https://aistudio.google.com/apikey",
+  },
 ];
 
 export default function Home() {
@@ -209,7 +224,7 @@ export default function Home() {
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={p.src} alt={p.label} width={18} height={18} style={{ flex: "0 0 auto" }} />
-                    <span style={{ flex: 1, fontSize: 13.5, fontWeight: 750, color: "#334155" }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 750, color: "#334155" }}>
                       {p.label}
                     </span>
                     <code
@@ -224,6 +239,21 @@ export default function Home() {
                     >
                       {p.hint}
                     </code>
+                    <a
+                      href={p.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        marginLeft: "auto",
+                        fontSize: 12,
+                        fontWeight: 750,
+                        color: "#2563eb",
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      키 받기 ↗
+                    </a>
                   </div>
                 ))}
               </div>
