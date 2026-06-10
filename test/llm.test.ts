@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   buildAnthropicParams,
-  buildOpenAIParams,
   toGeminiContents,
   providerForKey,
   type ChatMessage,
@@ -21,19 +20,11 @@ describe("buildAnthropicParams", () => {
   });
 });
 
-describe("buildOpenAIParams", () => {
-  const p = buildOpenAIParams("SYS", msgs, "gpt-4o");
-  it("system을 첫 메시지로 넣는다", () => {
-    expect(p.messages[0]).toEqual({ role: "system", content: "SYS" });
-    expect(p.messages[1]).toEqual({ role: "user", content: "출장보고 누구 전결?" });
-  });
-});
-
 describe("providerForKey", () => {
-  it("키 접두로 제공자를 판별한다", () => {
+  it("키 접두로 제공자를 판별하고, 그 외는 unsupported", () => {
     expect(providerForKey("sk-ant-abc")).toBe("anthropic");
     expect(providerForKey("AIzaSyAbc")).toBe("gemini");
-    expect(providerForKey("sk-proj-xyz")).toBe("openai");
+    expect(providerForKey("sk-proj-xyz")).toBe("unsupported");
   });
 });
 
