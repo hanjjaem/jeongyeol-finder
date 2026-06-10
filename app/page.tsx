@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
+import { lookup } from "../lib/lookup";
+import { withBase } from "../lib/basePath";
 
 type Option = { label: string; approver: string; drafter?: string; note?: string };
 
@@ -30,12 +32,6 @@ const PROVIDERS = [
     label: "Claude",
     hint: "sk-ant-…",
     url: "https://console.anthropic.com/settings/keys",
-  },
-  {
-    src: "/logos/openai.svg",
-    label: "OpenAI",
-    hint: "sk-…",
-    url: "https://platform.openai.com/api-keys",
   },
   {
     src: "/logos/gemini.svg",
@@ -80,20 +76,15 @@ export default function Home() {
     setResult(null);
     setChosen(null);
     try {
-      const res = await fetch("/api/lookup", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          ...(useKey ? { "x-llm-key": useKey } : {}),
-        },
-        body: JSON.stringify({ query: text }),
-      });
-      const json = await res.json();
-      if (res.status === 401 || json.needsKey) {
+      const r = await lookup(text, useKey);
+      if (r.ok) {
+        setResult(r.result as Result);
+      } else if (r.needsKey) {
         setNeedKey(true);
-        setError(json.error ?? "API 키가 필요합니다.");
-      } else if (json.result) setResult(json.result as Result);
-      else setError(json.error ?? "결과를 가져오지 못했습니다.");
+        setError(r.error);
+      } else {
+        setError(r.error);
+      }
     } catch {
       setError("네트워크 오류. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -190,7 +181,7 @@ export default function Home() {
                     <path d="M12 3l1.8 4.4L18.2 9.2l-4.4 1.8L12 15.4l-1.8-4.4L5.8 9.2l4.4-1.8z" />
                   </svg>
                   <span style={{ fontSize: 13.5, color: "#475569", lineHeight: 1.5 }}>
-                    표에 없는 <b>모호한 질문</b>은 LLM(Claude·GPT·Gemini)이 답해요
+                    표에 없는 <b>모호한 질문</b>은 LLM(Claude·Gemini)이 답해요
                   </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
@@ -235,7 +226,7 @@ export default function Home() {
                     }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.src} alt={p.label} width={18} height={18} style={{ flex: "0 0 auto" }} />
+                    <img src={withBase(p.src)} alt={p.label} width={18} height={18} style={{ flex: "0 0 auto" }} />
                     <span style={{ fontSize: 13.5, fontWeight: 750, color: "#334155" }}>
                       {p.label}
                     </span>
@@ -274,7 +265,7 @@ export default function Home() {
                 id="apikey-input"
                 type="password"
                 defaultValue={apiKey}
-                placeholder="키 붙여넣기 (sk-ant-… / sk-… / AIza…)"
+                placeholder="키 붙여넣기 (sk-ant-… / AIza…)"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     saveKey((e.target as HTMLInputElement).value);
@@ -393,7 +384,7 @@ export default function Home() {
                             search(undefined, keyDraft);
                           }
                         }}
-                        placeholder="sk-ant-… (Claude) / sk-… (OpenAI) / AIza… (Gemini)"
+                        placeholder="sk-ant-… (Claude) / AIza… (Gemini)"
                         autoFocus
                         style={{
                           width: "100%",
@@ -430,7 +421,7 @@ export default function Home() {
                         🔑 저장하고 다시 검색
                       </button>
                       <span style={{ fontSize: 11.5, color: "#9aa6b6", letterSpacing: "-.01em" }}>
-                        키는 이 브라우저에만 저장돼요(서버 저장 안 함). Claude · OpenAI · Gemini 지원.
+                        키는 이 브라우저에만 저장돼요(서버 저장 안 함). Claude · Gemini 지원.
                       </span>
                     </div>
                   )}
@@ -543,7 +534,7 @@ export default function Home() {
                     </div>
                     <div className="wonmun__foot">
                       <span className="wonmun__legend">★ 기안 · ● 전결</span>
-                      <a className="wonmun__link" href="/byeolpyo2-samujeongyeol.xlsx" target="_blank" rel="noopener noreferrer">원문 엑셀 열기 ↗</a>
+                      <a className="wonmun__link" href={withBase("/byeolpyo2-samujeongyeol.xlsx")} target="_blank" rel="noopener noreferrer">원문 엑셀 열기 ↗</a>
                     </div>
                   </div>
                 </>
