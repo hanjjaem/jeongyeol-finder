@@ -35,7 +35,9 @@ export async function POST(request: Request) {
   if (cache.has(ck)) return NextResponse.json({ result: cache.get(ck), source: "cache" });
 
   // 1) 로컬 우선 — 표에서 바로 해결되면 LLM 안 씀
-  const local = resolveLocal(query, getIndex());
+  const _idx = getIndex();
+  console.log("DIAG rows=", parseTable().length, "items=", _idx.items.length);
+  const local = resolveLocal(query, _idx);
   if (local) {
     cache.set(ck, local);
     return NextResponse.json({ result: local, source: "local" });
@@ -95,6 +97,19 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "요청이 잠깐 몰렸어요. 몇 초 뒤 다시 시도해 주세요." },
         { status: 429 }
+      );
+    }
+    // 4) 모델 없음/미지원 (예: 폐기된 모델명) — 키 문제 아님, 앱 설정 문제
+    if (
+      status === 404 ||
+      msg.includes("not found") ||
+      msg.includes("is not supported") ||
+      msg.includes("not supported for")
+    ) {
+      console.error("lookup 모델 오류:", e);
+      return NextResponse.json(
+        { error: "지금 설정된 AI 모델을 쓸 수 없어요(관리자 확인 필요). 키 문제는 아닙니다." },
+        { status: 502 }
       );
     }
     console.error("lookup 오류:", e);

@@ -1,14 +1,12 @@
-import fs from "node:fs";
-import path from "node:path";
-import { parse } from "csv-parse/sync";
+// CSV는 소스 진실. 빌드 전 scripts/gen-table.mjs 가 생성하는 TS 모듈을 import 한다.
+// (Cloudflare Workers에는 런타임 파일시스템이 없어 fs.readFileSync 불가 → 빌드 타임 임베드.
+//  JSON이 아닌 TS 배열 리터럴이어야 번들에 인라인되어 워커에서 동작)
+import rows from "./tableData.generated";
 
 export type Row = Record<string, string>;
 
-const CSV_PATH = path.join(process.cwd(), "data", "전결_검색테이블_통합.csv");
-
 export function parseTable(): Row[] {
-  const csv = fs.readFileSync(CSV_PATH, "utf-8");
-  return parse(csv, { columns: true, skip_empty_lines: true, bom: true }) as Row[];
+  return rows as Row[];
 }
 
 export function buildTablePrompt(rows: Row[]): string {

@@ -55,7 +55,7 @@ export async function callLLM(
   if (provider === "gemini") {
     const genAI = new GoogleGenerativeAI(userKey);
     const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL ?? "gemini-1.5-flash",
+      model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
       systemInstruction: system,
       generationConfig: { responseMimeType: "application/json" },
     });
