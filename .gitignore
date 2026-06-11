@@ -8,3 +8,5 @@ node_modules/
 *.tsbuildinfo
 .open-next/
 .wrangler/
+out/
+
