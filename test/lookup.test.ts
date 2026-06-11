@@ -7,50 +7,41 @@ vi.mock("../lib/llm", () => ({
   ),
 }));
 
-import { POST } from "../app/api/lookup/route";
-import { extractJson } from "../lib/json";
+import { lookup } from "../lib/lookup";
 
-function req(body: unknown, key?: string) {
-  const headers: Record<string, string> = { "content-type": "application/json" };
-  if (key) headers["x-llm-key"] = key;
-  return new Request("http://localhost/api/lookup", {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
-}
-
-describe("extractJson", () => {
-  it("앞뒤 텍스트가 있어도 JSON만 뽑는다", () => {
-    const o = extractJson('머리말 {"approver":"국·소장"} 꼬리말') as { approver: string };
-    expect(o.approver).toBe("국·소장");
-  });
-});
-
-describe("POST /api/lookup", () => {
+describe("lookup()", () => {
   beforeEach(() => vi.clearAllMocks());
+
   it("로컬에서 못 풀고 키가 있으면 LLM 폴백으로 구조화 결과를 반환한다", async () => {
-    const res = await POST(req({ query: "도무지모르겠는 xyz123 질의" }, "sk-ant-test"));
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json.source).toBe("llm");
-    expect(json.result.approver).toBe("국·소장");
+    const r = await lookup("도무지모르겠는 xyz123 질의", "sk-ant-test");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.source).toBe("llm");
+      expect(r.result.approver).toBe("국·소장");
+    }
   });
-  it("로컬에서 못 풀고 키가 없으면 401 needsKey (LLM 호출 안 함)", async () => {
-    const res = await POST(req({ query: "또다른 모르는 abc987 질의" }));
-    expect(res.status).toBe(401);
-    const json = await res.json();
-    expect(json.needsKey).toBe(true);
+
+  it("로컬에서 못 풀고 키가 없으면 needsKey(401)", async () => {
+    const r = await lookup("또다른 모르는 abc987 질의", "");
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.status).toBe(401);
+      expect(r.needsKey).toBe(true);
+    }
   });
+
   it("정확히 일치하면 로컬에서 처리하고 LLM을 호출하지 않는다", async () => {
-    const res = await POST(req({ query: "예산의 변경" }));
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json.source).toBe("local");
-    expect(json.result.approver).toBe("국·소장");
+    const r = await lookup("예산의 변경", "");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.source).toBe("local");
+      expect(r.result.approver).toBe("국·소장");
+    }
   });
+
   it("query가 없으면 400", async () => {
-    const res = await POST(req({}));
-    expect(res.status).toBe(400);
+    const r = await lookup("", "");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.status).toBe(400);
   });
 });

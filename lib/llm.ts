@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -21,22 +20,15 @@ export function buildAnthropicParams(system: string, messages: ChatMessage[], mo
   };
 }
 
-export function buildOpenAIParams(system: string, messages: ChatMessage[], model: string) {
-  return {
-    model,
-    response_format: { type: "json_object" as const },
-    messages: [{ role: "system" as const, content: system }, ...messages],
-  };
-}
-
-// 키 접두로 제공자 자동 판별 (sk-ant-… → Anthropic, AIza… → Gemini, 그 외 → OpenAI)
-export function providerForKey(key: string): "anthropic" | "openai" | "gemini" {
+// 키 접두로 제공자 판별. sk-ant-… → Anthropic, AIza… → Gemini,
+// 그 외(OpenAI 등) → 미지원: 브라우저에서 CORS로 직접 호출 불가.
+export function providerForKey(key: string): "anthropic" | "gemini" | "unsupported" {
   if (key.startsWith("sk-ant-")) return "anthropic";
   if (key.startsWith("AIza")) return "gemini";
-  return "openai";
+  return "unsupported";
 }
 
-// BYOK: 호출자가 넘긴 사용자 키로만 호출한다(서버 키 사용 안 함).
+// BYOK: 호출자가 넘긴 사용자 키로만 호출(서버 키 없음). 정적 앱이므로 브라우저에서 직접 호출.
 export async function callLLM(
   system: string,
   messages: ChatMessage[],
@@ -45,17 +37,10 @@ export async function callLLM(
   if (!userKey) throw new Error("API 키가 없습니다");
   const provider = providerForKey(userKey);
 
-  if (provider === "openai") {
-    const client = new OpenAI({ apiKey: userKey });
-    const model = process.env.OPENAI_MODEL ?? "gpt-4o";
-    const res = await client.chat.completions.create(buildOpenAIParams(system, messages, model));
-    return res.choices[0]?.message?.content ?? "";
-  }
-
   if (provider === "gemini") {
     const genAI = new GoogleGenerativeAI(userKey);
     const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL ?? "gemini-1.5-flash",
+      model: process.env.NEXT_PUBLIC_GEMINI_MODEL ?? "gemini-2.5-flash",
       systemInstruction: system,
       generationConfig: { responseMimeType: "application/json" },
     });
@@ -63,9 +48,20 @@ export async function callLLM(
     return res.response.text();
   }
 
-  const client = new Anthropic({ apiKey: userKey });
-  const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
-  const res = await client.messages.create(buildAnthropicParams(system, messages, model));
-  const block = res.content[0];
-  return block && block.type === "text" ? block.text : "";
+  if (provider === "anthropic") {
+    const client = new Anthropic({
+      apiKey: userKey,
+      dangerouslyAllowBrowser: true,
+      defaultHeaders: { "anthropic-dangerous-direct-browser-access": "true" },
+    });
+    const model = process.env.NEXT_PUBLIC_ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
+    const res = await client.messages.create(buildAnthropicParams(system, messages, model));
+    const block = res.content[0];
+    return block && block.type === "text" ? block.text : "";
+  }
+
+  throw Object.assign(
+    new Error("이 배포에선 Claude(sk-ant-)·Gemini(AIza) 키만 쓸 수 있어요. OpenAI 키는 브라우저에서 직접 호출이 막혀요."),
+    { code: "unsupported_provider" }
+  );
 }
