@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseTable, buildTablePrompt } from "../lib/table";
+import { parseTable } from "../lib/table";
 
 describe("parseTable", () => {
   it("169개 행을 파싱한다", () => {
@@ -16,13 +16,5 @@ describe("parseTable", () => {
     const rows = parseTable();
     const hit = rows.find((r) => r["검색키"] === "예산의 변경");
     expect(hit?.["전결권자"]).toBe("국·소장");
-  });
-});
-
-describe("buildTablePrompt", () => {
-  it("전결권자 값을 포함한 텍스트를 만든다", () => {
-    const text = buildTablePrompt(parseTable());
-    expect(text).toContain("국·소장");
-    expect(text).toContain("관내출장");
   });
 });

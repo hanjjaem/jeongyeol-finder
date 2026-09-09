@@ -1,121 +1,72 @@
-<p align="center">
-  <a href="https://jeongyeol-finder.vercel.app">
-    <img src="public/poster.png" alt="결재자를 단순하게 — 위임전결규정을 자연어로 검색해 전결권자를 알려주는 웹앱" width="780">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://jeongyeol-finder.vercel.app"><img src="https://img.shields.io/badge/Live_Demo-jeongyeol--finder.vercel.app-2563eb?style=flat-square" alt="Live Demo"></a>
-  <img src="https://img.shields.io/badge/Next.js-14-000?style=flat-square&logo=nextdotjs" alt="Next.js 14">
-  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Deploy-Vercel-000?style=flat-square&logo=vercel" alt="Vercel">
-</p>
-
 # 결재자를 단순하게
 
-<p align="center">
-  <img src="public/demo.gif" alt="업무 검색 → 결과 모달에서 전결권자 확인" width="320">
-</p>
+부산 동구청 위임전결규정 검색표를 기준으로 업무의 기안자·전결권자를 찾는 정적 웹앱입니다. 외부 LLM, API 키, 서버 API를 사용하지 않고 브라우저에 내장된 규정 데이터와 결정형 검색 로직만 사용합니다.
 
-#### ⚡ 한눈에
+## 현재 범위
 
-- 위임전결규정 **169항목** 을 자연어로 검색
-- **전결권자** 즉시 표시 + 별표2 원문 근거 함께
-- **감사 안전** — 표에 있는 것만 답, 지어내지 않음
+- 검색 데이터: `data/전결_검색테이블_통합.csv` 169행
+- 현재 운영 범위: 공통사항 중심의 정규화 데이터
+- 결과: 전결권자, 기안권자, 분기 조건, 근거, 비고
+- 원문: `public/byeolpyo2-samujeongyeol.xlsx` 정적 다운로드 링크
+- 검색 실패: 규정표에 없는 업무로 안내하고 예시 검색을 제시
 
-**스택** · Next.js 14 · TypeScript · Vercel<br>
-**LLM** · Claude / OpenAI / Gemini (BYOK · 사용자 키로 호출)
+## 처리 흐름
 
----
-
-## 어떻게 동작하나 (원리)
-
-### 1) 핵심 아이디어
-전결규정 원문(표)을 사람이 매번 뒤지는 대신, **검색하기 좋은 구조의 표 1개**로 정규화해 두고, LLM이 그 표만 근거로 답하게 했습니다. 규정이 169행으로 작아 **표 전체를 통째로 LLM 프롬프트에 주입**하는 단순한 방식(벡터DB/RAG 불필요)으로 충분히 정확합니다.
-
-### 2) 데이터 구조 (`data/전결_검색테이블_통합.csv`)
-원문 전결규정을 "안건 1건 = 1행"으로 풀고, 갈리는 조건을 컬럼으로 만들었습니다.
-
-| 컬럼 | 역할 |
-|---|---|
-| 검색키 / 검색키워드 | 업무 검색(동의어 포함) |
-| **분기기준** | 전결권자가 무엇으로 갈리는지: `없음 / 금액 / 직급 / 중요도 / 부서수 / 기간` |
-| 분기조건 · 금액하한 · 금액상한 | 좁히는 값(금액은 **구간**으로 저장) |
-| 기안권자 · **전결권자** | 누가 올리고, 누구한테 받는지(=핵심 답) |
-| 비고 | 준용·단독전결·원문미규정(gap) 등 |
-
-### 3) 처리 흐름
-```
-브라우저: 업무명 입력 → 검색  (헤더 x-llm-key: 사용자 본인 키, BYOK)
-   │  POST /api/lookup  { query }
-   ▼
-Next.js 서버 (Vercel) ── 표로 풀리면 즉시 응답(무료). 못 풀리면 ↓
-   │  사용자 키 없으면 401 needsKey. 있으면:
-   │  시스템 프롬프트 = [근거 규칙] + [표 169행 전체]
-   ▼
-LLM (Claude/OpenAI, 사용자 키로 호출)  →  구조화 JSON 반환
-   │  { found, approver, drafter, reason, note,
-   │    needsChoice, question, options:[{label, approver}] }
-   ▼
-결과 모달: 결재자(전결권자) 크게 표시.
-분기(금액·직급 등)가 있으면 모달 안에서 버튼으로 한 번 더 선택.
+```text
+data/전결_검색테이블_통합.csv
+        │ npm run data:build
+        ▼
+lib/tableData.generated.ts
+        │ buildIndex()
+        ▼
+lib/resolve.ts 결정형 검색
+        │
+        ▼
+app/page.tsx 결과 모달·엑셀형 원문 발췌
 ```
 
-### 4) 정확성·감사 안전 규칙 (`lib/systemPrompt.ts`)
-- 표에 **있는 것만** 답한다. 없으면 `found=false`, **전결권자를 지어내지 않는다**.
-- 금액은 `금액하한~상한` **구간**으로 판단(“이하” 직역 금지).
-- `비고`의 **준용/단독전결/gap** 을 결과에 함께 안내.
+`lib/table.ts`는 생성된 TypeScript 배열을 읽습니다. 앱 실행 중 XLSX를 파싱하거나 새로운 XLSX를 생성하지 않습니다. 원본 XLSX 변환은 별도의 데이터 변환 파이프라인에서 수행해야 합니다.
 
----
+## 주요 파일
 
-## 기술 스택 / 구조
-- **Next.js 14 (App Router) + TypeScript**, 배포 **Vercel**(GitHub push 자동배포)
-- LLM: **Claude(Anthropic) / OpenAI / Gemini 지원**, 사용자 키 접두로 자동 판별(BYOK)
-
+```text
+app/page.tsx                 검색 UI와 결과 모달
+lib/lookup.ts               로컬 검색 오케스트레이션·캐시
+lib/resolve.ts              키워드·금액·직급·조건 분기 결정 로직
+lib/table.ts                생성 데이터 로딩
+lib/tableData.generated.ts  CSV에서 생성되는 파일
+scripts/gen-table.mjs       CSV → TypeScript 배열 변환
+data/전결_검색테이블_통합.csv 검색 데이터 원천
+test/                       로컬 검색·분기·데이터 테스트
 ```
-app/page.tsx             검색 UI + 결과 모달(분기 되물음)
-app/api/lookup/route.ts  POST 핸들러(질의→JSON)
-lib/table.ts             CSV 로딩 → 프롬프트 텍스트화
-lib/systemPrompt.ts      근거 규칙 + 표 조립(JSON 출력 지시)
-lib/llm.ts               Anthropic/OpenAI 어댑터(+캐싱·JSON 모드)
-lib/json.ts              LLM 응답에서 JSON 추출
-data/...통합.csv         검색테이블(169행)
-```
-
----
 
 ## 로컬 실행
+
 ```bash
 npm install
-cp .env.example .env.local   # (선택) 모델명만. LLM 키는 앱에서 입력(BYOK)
-npm run dev                  # http://localhost:8000
+npm run dev       # 개발 서버
+npm test          # 단위 테스트
+npm run build     # 정적 산출물(out/) 생성
 ```
-
-## 환경변수
-- `ANTHROPIC_MODEL`(기본 claude-sonnet-4-6) / `OPENAI_MODEL`(기본 gpt-4o)
-- **LLM API 키는 서버에 두지 않습니다(BYOK).** 사용자가 앱에서 입력한 키로 호출합니다.
-
-## 비용 보호 (BYOK — Bring Your Own Key)
-**표(169행)로 풀리는 검색은 키 없이 누구나** 무료로 씁니다. 표에서 못 풀려 **LLM 호출이 필요한 모호한 질문일 때만** 사용자 본인 API 키를 요구합니다 — 그 키로 호출되므로 **요금은 사용자에게 청구**되고, **운영자(서버) 키는 한 푼도 안 나갑니다.**
-- 키는 **브라우저 `localStorage`에만** 저장. 검색 시 `x-llm-key` 헤더로 전송하며 **서버는 저장·로깅하지 않습니다.**
-- 제공자는 키 접두로 자동 판별: `sk-ant-…` → Anthropic, `AIza…` → Gemini, 그 외 → OpenAI.
-- 키 없이 LLM이 필요한 질문을 하면 `401 { needsKey: true }` → 결과창에서 "🔑 API 키 입력" 안내.
-
-## 배포 (Vercel + GitHub 자동배포)
-GitHub에 push → Vercel 프로젝트가 자동 빌드·배포. 환경변수는 Vercel Settings에 등록.
 
 ## 데이터 갱신
-원규정 변경 시 별도 프로젝트의 `build_검색테이블.py` 재실행 → `전결_검색테이블_통합.csv`를 `data/`에 덮어쓰고 commit·push.
 
-## 테스트
-```bash
-npm test
-```
-(골든 회귀 테스트는 API 키가 있을 때만 실제 LLM 호출, 없으면 자동 skip)
+1. 원본 변환 절차로 `data/전결_검색테이블_통합.csv`를 생성합니다.
+2. `npm run data:build`로 `lib/tableData.generated.ts`를 재생성합니다.
+3. `npm test`와 `npm run build`를 실행합니다.
+4. 변경된 CSV·생성 파일·검증 결과를 함께 기록합니다.
 
----
+전체 24개 시트를 추가할 때는 시트명, 부서명, 원문 행 번호, 기안·전결 표시 근거를 데이터에 보존해야 합니다. 같은 업무명이 여러 부서에 존재할 수 있으므로 부서 범위와 중복 처리 규칙도 함께 정의해야 합니다.
 
-## 한계 · 주의
-- **참고용**입니다. 최종 확인은 원규정·담당부서.
-- 표에 없는 사항, 준용(해석)으로 채운 항목은 그 사실을 함께 안내합니다.
-- 표가 수천 행 이상으로 커지면 "표 전체 주입" 대신 함수호출(조회)·RAG로 바꿔야 합니다(현재 169행이라 불필요).
+## 배포
+
+`next.config.mjs`의 정적 export와 `.github/workflows/deploy.yml`을 사용해 GitHub Pages에 배포합니다. 앱은 `/jeongyeol-finder/` base path를 사용합니다.
+
+운영 전에는 정적 산출물의 검색 동작, 원문 링크, 모바일 화면, 데이터 행 수를 확인합니다.
+
+## 운영 원칙
+
+- 규정표에 없는 전결권자를 추정하지 않습니다.
+- 규정 변경은 원본 확인 → 변환 → 테스트 → 정적 빌드 → 배포 검증 순서로 처리합니다.
+- 이 저장소에는 API 키나 개인 인증정보를 저장하지 않습니다.
+- 설계·구현의 역사적 LLM 기록은 `docs/superpowers/`에 남아 있지만 현재 실행 경로에서는 제거되었습니다.

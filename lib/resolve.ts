@@ -207,7 +207,7 @@ function score(it: Item, nq: string): number {
   return s;
 }
 
-// 확실할 때만 결과 반환, 모호하면 null(→ LLM 폴백).
+// 확실할 때만 결과 반환. 모호하거나 찾지 못하면 null을 반환한다.
 export function resolveLocal(query: string, index: Index): Result | null {
   const nq = norm(query);
   if (nq.length < 1) return null;

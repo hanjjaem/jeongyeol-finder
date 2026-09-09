@@ -1,11 +1,11 @@
 # 결재자를 단순하게 (jeongyeol-finder)
 
-부산 동구청 위임전결규정(169행 검색테이블)을 자연어로 검색해 **결재자(전결권자)** 를 알려주는 웹앱.
-UX는 **단일 검색 → 결과 모달**(채팅 아님). 분기(금액·직급·중요도)는 모달 안 버튼으로 한 번 더 선택.
-Next.js(App Router) + Vercel, LLM은 Claude/OpenAI 전환(`LLM_PROVIDER`). 표 전체를 시스템 프롬프트에 주입해 **JSON 결과**를 받음.
+부산 동구청 위임전결규정(현재 169행 검색테이블)을 결정형 로컬 검색으로 찾아 **결재자(전결권자)** 를 알려주는 정적 웹앱.
+UX는 **단일 검색 → 결과 모달**이다. 분기(금액·직급·중요도)는 모달 안 버튼으로 한 번 더 선택한다.
+Next.js(App Router) 정적 export + GitHub Pages를 사용하며, LLM·외부 API·API 키·서버 라우트는 사용하지 않는다.
 
-핵심 파일: `app/page.tsx`(검색 UI+모달) · `app/api/lookup/route.ts`(질의→JSON) · `lib/{table,systemPrompt,llm,json}.ts` · `data/전결_검색테이블_통합.csv`
-원리/구조는 `README.md`, 작업 기록은 `docs/superpowers/`. 디자인 컨텍스트는 `.impeccable.md`.
+핵심 파일: `app/page.tsx`(검색 UI+모달) · `lib/lookup.ts`(로컬 조회·캐시) · `lib/{table,resolve}.ts` · `data/전결_검색테이블_통합.csv`
+데이터 생성: `scripts/gen-table.mjs` → `lib/tableData.generated.ts`. 원리/구조는 `README.md`, 작업 기록은 `docs/superpowers/`. 디자인 컨텍스트는 `.impeccable.md`.
 
 ## Design Context
 

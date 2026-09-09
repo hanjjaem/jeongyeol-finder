@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { lookup } from "../lib/lookup";
 import { withBase } from "../lib/basePath";
 
@@ -25,68 +25,32 @@ type Result = {
 const EXAMPLES = ["병가", "경미한 출장보고", "예산의 변경", "관내출장"];
 // 못 찾았을 때 제시할 '표에 실제로 있는' 항목(로컬로 풀려 키 없이 즉시 동작)
 const SUGGESTIONS = ["병가", "연가", "시간외근무", "예산의 변경", "관내출장"];
-// BYOK 지원 제공자 (키 입력 모달에서 안내) + 키 발급 페이지
-const PROVIDERS = [
-  {
-    src: "/logos/claude.svg",
-    label: "Claude",
-    hint: "sk-ant-…",
-    url: "https://console.anthropic.com/settings/keys",
-  },
-  {
-    src: "/logos/gemini.svg",
-    label: "Gemini",
-    hint: "AIza…",
-    url: "https://aistudio.google.com/apikey",
-  },
-];
-
 export default function Home() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [needKey, setNeedKey] = useState(false);
   const [chosen, setChosen] = useState<number | null>(null);
-  const [apiKey, setApiKey] = useState("");
-  const [keyOpen, setKeyOpen] = useState(false);
-  const [keyDraft, setKeyDraft] = useState("");
 
-  useEffect(() => {
-    setApiKey(localStorage.getItem("llmKey") ?? "");
-  }, []);
-
-  function saveKey(k: string) {
-    const v = k.trim();
-    setApiKey(v);
-    if (v) localStorage.setItem("llmKey", v);
-    else localStorage.removeItem("llmKey");
-  }
-
-  async function search(q?: string, keyOverride?: string) {
+  async function search(q?: string) {
     const text = (q ?? query).trim();
     if (!text || loading) return;
     if (q) setQuery(q);
-    const useKey = (keyOverride ?? apiKey).trim();
     setOpen(true);
     setLoading(true);
     setError(null);
-    setNeedKey(false);
     setResult(null);
     setChosen(null);
     try {
-      const r = await lookup(text, useKey);
+      const r = await lookup(text);
       if (r.ok) {
         setResult(r.result as Result);
-      } else if (r.needsKey) {
-        setNeedKey(true);
-        setError(r.error);
       } else {
         setError(r.error);
       }
     } catch {
-      setError("네트워크 오류. 잠시 후 다시 시도해 주세요.");
+      setError("검색 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setLoading(false);
     }
@@ -108,26 +72,6 @@ export default function Home() {
           <div className="brand-mark">결</div>
           <span>결재자를 단순하게</span>
         </div>
-        <button
-          onClick={() => setKeyOpen(true)}
-          title="API 키 설정"
-          style={{
-            marginLeft: "auto",
-            border: apiKey ? "1px solid rgba(37,99,235,.35)" : "1px solid rgba(17,24,39,.12)",
-            background: apiKey ? "rgba(37,99,235,.08)" : "#fff",
-            color: apiKey ? "#2563eb" : "#475569",
-            borderRadius: 10,
-            padding: "7px 12px",
-            fontSize: 12,
-            fontWeight: 800,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          🔑 {apiKey ? "키 설정됨" : "API 키"}
-        </button>
       </header>
 
       <main className="main">
@@ -167,196 +111,6 @@ export default function Home() {
 
       <p className="foot">위임전결규정 기반 참고용입니다. 최종 확인은 원규정/담당부서.</p>
 
-      {keyOpen && (
-        <div className="modal-backdrop" onClick={() => setKeyOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
-            <div className="modal-head">
-              <div className="modal-title">API 키 입력 (BYOK)</div>
-              <button className="close" onClick={() => setKeyOpen(false)} aria-label="닫기">×</button>
-            </div>
-            <div className="modal-body" style={{ textAlign: "left" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, margin: "6px 0 16px" }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "0 0 auto", marginTop: 2 }}>
-                    <path d="M12 3l1.8 4.4L18.2 9.2l-4.4 1.8L12 15.4l-1.8-4.4L5.8 9.2l4.4-1.8z" />
-                  </svg>
-                  <span style={{ fontSize: 13.5, color: "#475569", lineHeight: 1.5 }}>
-                    표에 없는 <b>모호한 질문</b>은 LLM(Claude·Gemini)이 답해요
-                  </span>
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "0 0 auto", marginTop: 2 }}>
-                    <circle cx="8.5" cy="14.5" r="4" />
-                    <path d="M11.3 11.7 20 3" />
-                    <path d="M17 3l3 3M15.5 5.5l2 2" />
-                  </svg>
-                  <span style={{ fontSize: 13.5, color: "#475569", lineHeight: 1.5 }}>
-                    <b>본인 API 키</b>가 필요해요 — 아래에서 발급·입력
-                  </span>
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "0 0 auto", marginTop: 2 }}>
-                    <rect x="3" y="6" width="18" height="13" rx="2" />
-                    <path d="M3 10h18" />
-                  </svg>
-                  <span style={{ fontSize: 13.5, color: "#94a3b8", lineHeight: 1.5 }}>
-                    요금은 본인 키로 청구돼요
-                  </span>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  border: "1px solid rgba(17,24,39,.08)",
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  marginBottom: 16,
-                }}
-              >
-                {PROVIDERS.map((p, i) => (
-                  <div
-                    key={p.label}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "11px 14px",
-                      borderTop: i === 0 ? undefined : "1px solid rgba(17,24,39,.06)",
-                      background: "rgba(255,255,255,.45)",
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={withBase(p.src)} alt={p.label} width={18} height={18} style={{ flex: "0 0 auto" }} />
-                    <span style={{ fontSize: 13.5, fontWeight: 750, color: "#334155" }}>
-                      {p.label}
-                    </span>
-                    <code
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "#64748b",
-                        background: "rgba(17,24,39,.05)",
-                        padding: "3px 9px",
-                        borderRadius: 7,
-                      }}
-                    >
-                      {p.hint}
-                    </code>
-                    <a
-                      href={p.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        marginLeft: "auto",
-                        fontSize: 12,
-                        fontWeight: 750,
-                        color: "#2563eb",
-                        textDecoration: "none",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      키 받기 ↗
-                    </a>
-                  </div>
-                ))}
-              </div>
-
-              <input
-                id="apikey-input"
-                type="password"
-                defaultValue={apiKey}
-                placeholder="키 붙여넣기 (sk-ant-… / AIza…)"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    saveKey((e.target as HTMLInputElement).value);
-                    setKeyOpen(false);
-                  }
-                }}
-                style={{
-                  width: "100%",
-                  padding: "13px 14px",
-                  borderRadius: 12,
-                  border: "1px solid rgba(17,24,39,.15)",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                  outline: "none",
-                }}
-              />
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  margin: "10px 2px 0",
-                  fontSize: 12,
-                  color: "#94a3b8",
-                  letterSpacing: "-.01em",
-                }}
-              >
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  style={{ flex: "0 0 auto" }}
-                >
-                  <rect x="5" y="11" width="14" height="9" rx="2" />
-                  <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-                </svg>
-                키는 이 브라우저에만 저장돼요. 서버에 저장·로깅하지 않습니다.
-              </div>
-
-              <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-                <button
-                  onClick={() => {
-                    const el = document.getElementById("apikey-input") as HTMLInputElement | null;
-                    saveKey(el?.value ?? "");
-                    setKeyOpen(false);
-                  }}
-                  style={{
-                    flex: 1,
-                    border: 0,
-                    background: "linear-gradient(135deg,#2563eb,#7c3aed)",
-                    color: "#fff",
-                    borderRadius: 12,
-                    padding: "12px",
-                    fontSize: 14,
-                    fontWeight: 850,
-                    cursor: "pointer",
-                  }}
-                >
-                  저장
-                </button>
-                {apiKey && (
-                  <button
-                    onClick={() => {
-                      saveKey("");
-                      setKeyOpen(false);
-                    }}
-                    style={{
-                      border: "1px solid rgba(17,24,39,.15)",
-                      background: "#fff",
-                      color: "#64748b",
-                      borderRadius: 12,
-                      padding: "12px 16px",
-                      fontSize: 14,
-                      fontWeight: 800,
-                      cursor: "pointer",
-                    }}
-                  >
-                    삭제
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {open && (
         <div className="modal-backdrop" onClick={() => setOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -370,61 +124,6 @@ export default function Home() {
               {!loading && error && (
                 <div className="no-result">
                   {error}
-                  {needKey && (
-                    <div
-                      style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}
-                    >
-                      <input
-                        type="password"
-                        value={keyDraft}
-                        onChange={(e) => setKeyDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && keyDraft.trim()) {
-                            saveKey(keyDraft);
-                            search(undefined, keyDraft);
-                          }
-                        }}
-                        placeholder="sk-ant-… (Claude) / AIza… (Gemini)"
-                        autoFocus
-                        style={{
-                          width: "100%",
-                          padding: "12px 14px",
-                          borderRadius: 12,
-                          border: "1px solid rgba(17,24,39,.15)",
-                          fontSize: 14,
-                          fontWeight: 600,
-                          outline: "none",
-                        }}
-                      />
-                      <button
-                        onClick={() => {
-                          if (keyDraft.trim()) {
-                            saveKey(keyDraft);
-                            search(undefined, keyDraft);
-                          }
-                        }}
-                        disabled={!keyDraft.trim()}
-                        style={{
-                          border: 0,
-                          background: keyDraft.trim()
-                            ? "linear-gradient(135deg,#2563eb,#7c3aed)"
-                            : "#cbd5e1",
-                          color: "#fff",
-                          borderRadius: 12,
-                          padding: "12px 18px",
-                          fontSize: 14,
-                          fontWeight: 850,
-                          cursor: keyDraft.trim() ? "pointer" : "default",
-                          boxShadow: "0 10px 22px rgba(89,87,255,.24)",
-                        }}
-                      >
-                        🔑 저장하고 다시 검색
-                      </button>
-                      <span style={{ fontSize: 11.5, color: "#9aa6b6", letterSpacing: "-.01em" }}>
-                        키는 이 브라우저에만 저장돼요(서버 저장 안 함). Claude · Gemini 지원.
-                      </span>
-                    </div>
-                  )}
                 </div>
               )}
 

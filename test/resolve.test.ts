@@ -52,7 +52,7 @@ describe("resolveLocal — 로컬에서 즉시 처리(정확/명확한 경우)",
   });
 });
 
-describe("resolveLocal — 모호/무관하면 null(→ LLM 폴백)", () => {
+describe("resolveLocal — 모호/무관하면 null", () => {
   it("'공사'만으로는 모호 → null", () => {
     expect(r("공사")).toBeNull();
   });
