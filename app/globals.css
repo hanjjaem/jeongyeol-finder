@@ -124,6 +124,9 @@ body::before{
 .go:disabled{opacity:.6;cursor:default;transform:none}
 
 .examples{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;width:min(100%, 740px);margin:18px auto 0}
+.department-filter{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;color:#718096;font-size:12px;font-weight:800;letter-spacing:-.02em}
+.department-filter select{min-width:180px;border:1px solid rgba(17,24,39,.12);border-radius:10px;background:rgba(255,255,255,.8);color:#334155;padding:9px 30px 9px 12px;font:inherit;outline:0;cursor:pointer}
+.department-filter select:focus{border-color:rgba(52,120,246,.55);box-shadow:0 0 0 3px rgba(52,120,246,.12)}
 .ex{
   border:1px solid rgba(17,24,39,.10);background:rgba(255,255,255,.64);color:#475569;
   border-radius:999px;padding:11px 16px;font-size:14px;font-weight:800;letter-spacing:-.02em;
@@ -184,6 +187,7 @@ body::before{
 .rbox__tab--reason{color:#0e7a54;background:#dff2e8}
 .rbox__tab--note{color:#a85d09;background:#fbecd3}
 .rbox__v{color:#12233e;font-size:16px;font-weight:750;letter-spacing:-.02em;line-height:1.5;word-break:break-word}
+.rbox__tab--source{color:#17644a;background:#dff2e8}
 .rbox--answer{
   background:linear-gradient(135deg,#eef2ff 0%, #f5f0ff 46%, #e6f6ff 100%);
   box-shadow:0 10px 30px rgba(31,56,88,.08), 0 0 22px rgba(91,90,255,.28), 0 0 50px rgba(124,58,237,.16);
@@ -219,9 +223,11 @@ body::before{
 .xl__tab{font-size:11.5px;font-weight:800;color:#5a6b88;padding:6px 14px;background:#e4e6ea;border-radius:0 0 7px 7px}
 .xl__tab--active{color:#1c6b41;background:#fff;border-top:2px solid #217346}
 .wonmun__foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:9px;flex-wrap:wrap}
+.wonmun__links{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .wonmun__legend{font-size:11.5px;color:#8a96a8;font-weight:700}
 .wonmun__link{font-size:12.5px;font-weight:800;color:#1c6b41;text-decoration:none;background:#e6f2ea;padding:7px 12px;border-radius:8px;border:1px solid #c5e3d2}
 .wonmun__link:hover{background:#d8ecdf}
+.wonmun__source-note{font-size:10.5px;color:#9a6b28;font-weight:700}
 .result-hero{
   position:relative;overflow:hidden;border-radius:26px;padding:30px 26px;
   display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;

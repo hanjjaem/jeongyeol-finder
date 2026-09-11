@@ -1,12 +1,13 @@
 # 결재자를 단순하게
 
-부산 동구청 위임전결규정 검색표를 기준으로 업무의 기안자·전결권자를 찾는 정적 웹앱입니다. 외부 LLM, API 키, 서버 API를 사용하지 않고 브라우저에 내장된 규정 데이터와 결정형 검색 로직만 사용합니다.
+부산 동구청 위임전결규정 원문 후보를 기준으로 업무의 기안자·전결권자를 찾는 정적 웹앱입니다. 외부 LLM, API 키, 서버 API를 사용하지 않고 브라우저에 내장된 규정 데이터와 결정형 검색 로직만 사용합니다.
 
 ## 현재 범위
 
-- 검색 데이터: `data/전결_검색테이블_통합.csv` 169행
-- 현재 운영 범위: 공통사항 중심의 정규화 데이터
-- 결과: 전결권자, 기안권자, 분기 조건, 근거, 비고
+- 기존 호환 검색 데이터: `data/전결_검색테이블_통합.csv` 169행
+- 전체 검토 데이터: `lib/fullData.generated.ts` 24개 시트·3,359개 원문 행
+- 검색 범위: 기본은 기존 결정형 검색. 부서를 선택하면 전체 원문 후보 검색
+- 결과: 전결권자, 기안권자, 원문 시트·행·셀 표시, 분기 조건, 비고
 - 원문: `public/byeolpyo2-samujeongyeol.xlsx` 정적 다운로드 링크
 - 검색 실패: 규정표에 없는 업무로 안내하고 예시 검색을 제시
 
@@ -20,6 +21,14 @@ lib/tableData.generated.ts
         │ buildIndex()
         ▼
 lib/resolve.ts 결정형 검색
+
+services/jeongyeol-finder/data/normalized/records.json
+        │ scripts/gen-full-data.mjs --input <path>
+        ▼
+lib/fullData.generated.ts
+        │ 부서 선택 또는 기존 검색 보강
+        ▼
+lib/lookup.ts 전체 원문 후보·근거 검색
         │
         ▼
 app/page.tsx 결과 모달·엑셀형 원문 발췌

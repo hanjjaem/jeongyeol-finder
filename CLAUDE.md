@@ -1,11 +1,11 @@
 # 결재자를 단순하게 (jeongyeol-finder)
 
-부산 동구청 위임전결규정(현재 169행 검색테이블)을 결정형 로컬 검색으로 찾아 **결재자(전결권자)** 를 알려주는 정적 웹앱.
+부산 동구청 위임전결규정(기존 169행 검색테이블과 전체 3,359행 원문 후보)을 결정형 로컬 검색으로 찾아 **결재자(전결권자)** 를 알려주는 정적 웹앱.
 UX는 **단일 검색 → 결과 모달**이다. 분기(금액·직급·중요도)는 모달 안 버튼으로 한 번 더 선택한다.
 Next.js(App Router) 정적 export + GitHub Pages를 사용하며, LLM·외부 API·API 키·서버 라우트는 사용하지 않는다.
 
-핵심 파일: `app/page.tsx`(검색 UI+모달) · `lib/lookup.ts`(로컬 조회·캐시) · `lib/{table,resolve}.ts` · `data/전결_검색테이블_통합.csv`
-데이터 생성: `scripts/gen-table.mjs` → `lib/tableData.generated.ts`. 원리/구조는 `README.md`, 작업 기록은 `docs/superpowers/`. 디자인 컨텍스트는 `.impeccable.md`.
+핵심 파일: `app/page.tsx`(검색 UI·부서 선택·근거 모달) · `lib/lookup.ts`(169행 호환 검색·전체 원문 후보) · `lib/{table,resolve}.ts` · `lib/fullData.ts` · `data/전결_검색테이블_통합.csv`
+데이터 생성: `scripts/gen-table.mjs` → `lib/tableData.generated.ts`, `scripts/gen-full-data.mjs --input <normalized-records.json>` → `lib/fullData.generated.ts`. 원리/구조는 `README.md`, 작업 기록은 `docs/superpowers/`. 디자인 컨텍스트는 `.impeccable.md`.
 
 ## Design Context
 

@@ -1,9 +1,33 @@
 // query → 결정형 전결 조회. 외부 네트워크·LLM 호출 없이 로컬 표만 사용한다.
 import { parseTable } from "./table";
 import { buildIndex, resolveLocal, type Index, type Result } from "./resolve";
+import { getFullRecords, type FullRecord } from "./fullData";
+
+export type SourceEvidence = {
+  id: string;
+  sourceSheet: string;
+  sourceRow: number;
+  sourceRange: string;
+  category: string;
+  taskRaw: string;
+  task: string;
+  path: string[];
+  marks: FullRecord["marks"];
+  drafter: string[];
+  approver: string[];
+  status: string;
+  issues: string[];
+};
+
+export type EnrichedResult = Result & {
+  evidence?: SourceEvidence[];
+  department?: string;
+  departments?: string[];
+  fullSearch?: boolean;
+};
 
 export type LookupResponse =
-  | { ok: true; result: Result; source: "local" | "cache" | "none" }
+  | { ok: true; result: EnrichedResult; source: "local" | "cache" | "full" | "none" }
   | { ok: false; error: string; status: number };
 
 let _index: Index | null = null;
@@ -13,9 +37,40 @@ function getIndex(): Index {
 }
 
 const cache = new Map<string, Result>();
-const keyOf = (q: string) => q.trim().toLowerCase().replace(/\s+/g, "");
+const fullRecords = getFullRecords();
+const fullIndex = fullRecords.map((record) => ({ record, text: compact([record.category.text, ...record.path.map((entry) => entry.text), record.task_raw].join(" ")) }));
+const keyOf = (q: string, department?: string) => `${department ?? ""}|${q.trim().toLowerCase().replace(/\s+/g, "")}`;
 
-function notFound(task: string): Result {
+function compact(value: string): string {
+  return value.toLowerCase().replace(/[\s·∙,()>＞"'`\-–—.·]/g, "");
+}
+
+function toEvidence(record: FullRecord): SourceEvidence {
+  return {
+    id: record.id,
+    sourceSheet: record.source_sheet,
+    sourceRow: record.source_row_start,
+    sourceRange: record.source_range,
+    category: record.category.text,
+    taskRaw: record.task_raw,
+    task: record.task,
+    path: record.path.map((entry) => entry.text),
+    marks: record.marks,
+    drafter: record.drafter,
+    approver: record.approver,
+    status: record.status,
+    issues: record.issues,
+  };
+}
+
+function fullMatches(query: string, department?: string): FullRecord[] {
+  const tokens = query.split(/\s+/).map(compact).filter(Boolean);
+  return fullIndex
+    .filter(({ record, text }) => (!department || record.department_scope === department) && tokens.every((token) => text.includes(token)))
+    .map(({ record }) => record);
+}
+
+function notFound(task: string): EnrichedResult {
   return {
     found: false,
     task,
@@ -26,19 +81,92 @@ function notFound(task: string): Result {
     drafter: "",
     reason: "",
     note: "",
+    fullSearch: true,
   };
 }
 
-export async function lookup(query: string): Promise<LookupResponse> {
+function directFull(record: FullRecord): EnrichedResult {
+  return {
+    found: true,
+    task: record.task,
+    needsChoice: false,
+    question: "",
+    options: [],
+    approver: record.approver.join(", "),
+    drafter: record.drafter.join(", "),
+    reason: `${record.category.text} · ${record.task}`,
+    note: "",
+    evidence: [toEvidence(record)],
+    department: record.department_scope,
+    departments: [record.department_scope],
+    fullSearch: true,
+  };
+}
+
+function fullResult(query: string, records: FullRecord[]): EnrichedResult {
+  if (records.length === 0) return notFound(query);
+  if (records.length === 1) return directFull(records[0]);
+
+  const options = records.slice(0, 50).map((record) => ({
+    label: `${record.department_scope} · ${record.task}`,
+    approver: record.approver.join(", "),
+    drafter: record.drafter.join(", "),
+    note: record.issues.length ? `검토 필요: ${record.issues.join(", ")}` : "",
+    evidence: toEvidence(record),
+  }));
+  return {
+    found: true,
+    task: query,
+    needsChoice: true,
+    question: `원문 후보 ${records.length}건 중 하나를 선택하세요`,
+    options,
+    approver: "",
+    drafter: "",
+    reason: `${new Set(records.map((record) => record.department_scope)).size}개 부서 · ${records.length}개 원문 행`,
+    note: records.length > options.length ? `후보가 많아 상위 ${options.length}건만 표시합니다.` : "",
+    evidence: records.slice(0, 50).map(toEvidence),
+    departments: [...new Set(records.map((record) => record.department_scope))],
+    fullSearch: true,
+  };
+}
+
+function enrichLegacy(result: Result, query: string, department?: string): EnrichedResult {
+  const records = fullMatches(result.task, department);
+  const sameRole = (record: FullRecord) => {
+    const approver = record.approver.join(",");
+    const drafter = record.drafter.join(",");
+    return compact(approver) === compact(result.approver) && compact(drafter) === compact(result.drafter);
+  };
+  const ordered = [...records.filter(sameRole), ...records.filter((record) => !sameRole(record))];
+  const options = result.options.map((option) => {
+    const label = compact(option.label);
+    const candidate = records.find((record) => compact(record.task_raw).includes(label) && compact(record.approver.join(",")) === compact(option.approver));
+    return candidate ? { ...option, evidence: toEvidence(candidate) } : option;
+  });
+  return {
+    ...result,
+    options,
+    evidence: ordered.slice(0, 50).map(toEvidence),
+    departments: [...new Set(ordered.map((record) => record.department_scope))],
+    department,
+  };
+}
+
+export async function lookup(query: string, department?: string): Promise<LookupResponse> {
   const q = (query ?? "").trim();
   if (!q) return { ok: false, error: "query가 필요합니다", status: 400 };
 
-  const ck = keyOf(q);
+  const ck = keyOf(q, department);
   const cached = cache.get(ck);
-  if (cached) return { ok: true, result: cached, source: "cache" };
+  if (cached) return { ok: true, result: cached as EnrichedResult, source: "cache" };
 
-  const local = resolveLocal(q, getIndex());
-  const result = local ?? notFound(q);
+  const local = department ? null : resolveLocal(q, getIndex());
+  if (department) {
+    const result = fullResult(q, fullMatches(q, department));
+    cache.set(ck, result);
+    return { ok: true, result, source: result.found ? "full" : "none" };
+  }
+  const result = local ? enrichLegacy(local, q) : fullResult(q, fullMatches(q));
   cache.set(ck, result);
-  return { ok: true, result, source: local ? "local" : "none" };
+  return { ok: true, result, source: local ? "local" : result.found ? "full" : "none" };
 }

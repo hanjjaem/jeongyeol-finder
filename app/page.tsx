@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
-import { lookup } from "../lib/lookup";
+import { getDepartments } from "../lib/fullData";
+import { lookup, type SourceEvidence } from "../lib/lookup";
 import { withBase } from "../lib/basePath";
 
-type Option = { label: string; approver: string; drafter?: string; note?: string };
+type Option = { label: string; approver: string; drafter?: string; note?: string; evidence?: SourceEvidence };
 
 const RANKS = ["담당자", "팀장", "실·단·과장", "국·소장", "부구청장", "구청장"];
 function rankMark(rank: string, drafter?: string, approver?: string) {
@@ -20,13 +21,18 @@ type Result = {
   drafter?: string;
   reason?: string;
   note?: string;
+  evidence?: SourceEvidence[];
+  departments?: string[];
+  fullSearch?: boolean;
 };
 
 const EXAMPLES = ["병가", "경미한 출장보고", "예산의 변경", "관내출장"];
+const DEPARTMENTS = ["전체 부서", ...getDepartments()];
 // 못 찾았을 때 제시할 '표에 실제로 있는' 항목(로컬로 풀려 키 없이 즉시 동작)
 const SUGGESTIONS = ["병가", "연가", "시간외근무", "예산의 변경", "관내출장"];
 export default function Home() {
   const [query, setQuery] = useState("");
+  const [department, setDepartment] = useState("전체 부서");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
@@ -43,7 +49,7 @@ export default function Home() {
     setResult(null);
     setChosen(null);
     try {
-      const r = await lookup(text);
+      const r = await lookup(text, department === "전체 부서" ? undefined : department);
       if (r.ok) {
         setResult(r.result as Result);
       } else {
@@ -62,8 +68,16 @@ export default function Home() {
   const approver = chosen !== null ? opts[chosen]?.approver : result?.approver;
   const noteText = chosen !== null ? opts[chosen]?.note : result?.note;
   const drafter = chosen !== null ? opts[chosen]?.drafter : result?.drafter;
-  const unit = (result?.reason ?? "").split(" · ")[0] ?? "";
-  const detail = result?.task ?? "";
+  const evidence = chosen !== null ? opts[chosen]?.evidence : result?.evidence?.[0];
+  const unit = evidence?.category ?? (result?.reason ?? "").split(" · ")[0] ?? "";
+  const detail = evidence?.taskRaw ?? result?.task ?? "";
+  const displayRanks = evidence?.marks.length
+    ? [...new Set(evidence.marks.map((mark) => mark.rank))]
+    : RANKS;
+  const markForRank = (rank: string) => {
+    if (!evidence) return rankMark(rank, drafter, approver);
+    return evidence.marks.filter((mark) => mark.rank === rank).map((mark) => mark.symbol === "○" ? "●" : "★").join("");
+  };
 
   return (
     <div className="app">
@@ -99,6 +113,13 @@ export default function Home() {
             <span className="go__label">{loading ? "검색 중…" : "검색"}</span>
           </button>
         </div>
+
+        <label className="department-filter">
+          <span>부서 범위</span>
+          <select value={department} onChange={(e) => setDepartment(e.target.value)} aria-label="부서 범위">
+            {DEPARTMENTS.map((name) => <option key={name}>{name}</option>)}
+          </select>
+        </label>
 
         <div className="examples">
           {EXAMPLES.map((ex) => (
@@ -188,6 +209,12 @@ export default function Home() {
                         <span className="rbox__v">{noteText}</span>
                       </div>
                     )}
+                    {evidence && (
+                      <div className="rbox">
+                        <span className="rbox__tab rbox__tab--source">원문 행</span>
+                        <span className="rbox__v">{evidence.sourceSheet} · {evidence.sourceRow}행 · {evidence.sourceRange}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="wonmun">
@@ -202,38 +229,41 @@ export default function Home() {
                           <thead>
                             <tr className="xl__letters">
                               <th className="xl__corner" />
-                              {["A", "B", "C", "D", "E", "F", "G", "H"].map((c) => <th key={c}>{c}</th>)}
+                              {["A", "B", ...displayRanks.map((_, index) => String.fromCharCode(67 + index))].map((c) => <th key={c}>{c}</th>)}
                             </tr>
                             <tr>
                               <th className="xl__rownum">1</th>
                               <th rowSpan={2} className="xl__h">단위사무</th>
                               <th rowSpan={2} className="xl__h">세부사무</th>
-                              <th colSpan={RANKS.length} className="xl__h">기안자 · 전결권자</th>
+                              <th colSpan={displayRanks.length} className="xl__h">기안자 · 전결권자</th>
                             </tr>
                             <tr>
                               <th className="xl__rownum">2</th>
-                              {RANKS.map((rk) => <th key={rk} className="xl__h xl__rank">{rk}</th>)}
+                              {displayRanks.map((rk) => <th key={rk} className="xl__h xl__rank">{rk}</th>)}
                             </tr>
                           </thead>
                           <tbody>
                             <tr>
-                              <th className="xl__rownum">3</th>
+                              <th className="xl__rownum">{evidence?.sourceRow ?? 3}</th>
                               <td className="xl__unit">{unit}</td>
                               <td className="xl__detail">{detail}</td>
-                              {RANKS.map((rk) => (
-                                <td key={rk} className="xl__mark">{rankMark(rk, drafter, approver)}</td>
+                              {displayRanks.map((rk) => (
+                                <td key={rk} className="xl__mark">{markForRank(rk)}</td>
                               ))}
                             </tr>
                           </tbody>
                         </table>
                       </div>
                       <div className="xl__tabs">
-                        <span className="xl__tab xl__tab--active">공통사항</span>
+                        <span className="xl__tab xl__tab--active">{evidence?.sourceSheet ?? "공통사항"}</span>
                       </div>
                     </div>
                     <div className="wonmun__foot">
                       <span className="wonmun__legend">★ 기안 · ● 전결</span>
-                      <a className="wonmun__link" href={withBase("/byeolpyo2-samujeongyeol.xlsx")} target="_blank" rel="noopener noreferrer">원문 엑셀 열기 ↗</a>
+                      <div className="wonmun__links">
+                        <a className="wonmun__link" href={withBase("/byeolpyo2-samujeongyeol.xlsx")} target="_blank" rel="noopener noreferrer">배포된 엑셀 파일 열기 ↗</a>
+                        {evidence && <span className="wonmun__source-note">표시된 행과 파일 버전은 별도 대조 필요</span>}
+                      </div>
                     </div>
                   </div>
                 </>
