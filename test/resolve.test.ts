@@ -39,6 +39,20 @@ describe("resolveLocal — 로컬에서 즉시 처리(정확/명확한 경우)",
     expect(res?.approver).toBe("실·단·과장");
   });
 
+  it.each([
+    ["5천만원 행사 용역", "국·소장"],
+    ["5628만원 행사 용역", "부구청장"],
+    ["5,628만원 행사 용역", "부구청장"],
+    ["3천1백만원 행사 용역", "국·소장"],
+    ["5628만원 공사", "국·소장"],
+    ["1억원 준공검사관 지정", "국·소장"],
+  ])("'%s' → 금액·업무 종류 판정 → %s", (query, approver) => {
+    const res = r(query);
+    expect(res?.found).toBe(true);
+    expect(res?.needsChoice).toBe(false);
+    expect(res?.approver).toBe(approver);
+  });
+
   it("'동장 조퇴' → 직급 분기 자동확정 → 국·소장", () => {
     const res = r("동장 조퇴");
     expect(res?.found).toBe(true);

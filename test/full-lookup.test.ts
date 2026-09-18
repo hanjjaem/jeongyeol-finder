@@ -44,4 +44,25 @@ describe("lookup() — 전체 원문 후보와 근거", () => {
       expect(response.result.evidence?.every((evidence) => evidence.sourceSheet === "기획감사실")).toBe(true);
     }
   });
+
+  it("부서를 지정해도 금액 분기는 결정형 규칙을 적용한다", async () => {
+    const response = await lookup("5628만원 행사 용역", "건설과");
+    expect(response.ok).toBe(true);
+    if (response.ok) {
+      expect(response.source).toBe("local");
+      expect(response.result.approver).toBe("부구청장");
+    }
+  });
+
+  it.each([
+    ["3천1백만원 행사 용역", "국·소장", 27],
+    ["5628만원 행사 용역", "부구청장", 26],
+  ])("금액 결과 '%s'에 정확한 세부 원문 행을 연결한다", async (query, approver, sourceRow) => {
+    const response = await lookup(query);
+    expect(response.ok).toBe(true);
+    if (response.ok) {
+      expect(response.result.approver).toBe(approver);
+      expect(response.result.evidence?.[0]?.sourceRow).toBe(sourceRow);
+    }
+  });
 });

@@ -137,10 +137,19 @@ function enrichLegacy(result: Result, query: string, department?: string): Enric
     const drafter = record.drafter.join(",");
     return compact(approver) === compact(result.approver) && compact(drafter) === compact(result.drafter);
   };
-  const ordered = [...records.filter(sameRole), ...records.filter((record) => !sameRole(record))];
+  const conditionNeedle = compact((result.condition || "").split("/")[0].replace(/^\s*[가-힣]\.\s*/, ""));
+  const sameCondition = (record: FullRecord) => {
+    if (!conditionNeedle) return false;
+    const evidenceText = compact([record.task_raw, ...record.path.map((entry) => entry.text)].join(" "));
+    return evidenceText.includes(conditionNeedle);
+  };
+  const ordered = [...records].sort((a, b) => {
+    const priority = (record: FullRecord) => sameCondition(record) && sameRole(record) ? 0 : sameCondition(record) ? 1 : sameRole(record) ? 2 : 3;
+    return priority(a) - priority(b);
+  });
   const options = result.options.map((option) => {
     const label = compact(option.label);
-    const candidate = records.find((record) => compact(record.task_raw).includes(label) && compact(record.approver.join(",")) === compact(option.approver));
+    const candidate = records.find((record) => compact([record.task_raw, ...record.path.map((entry) => entry.text)].join(" ")).includes(label) && compact(record.approver.join(",")) === compact(option.approver));
     return candidate ? { ...option, evidence: toEvidence(candidate) } : option;
   });
   return {
@@ -160,13 +169,13 @@ export async function lookup(query: string, department?: string): Promise<Lookup
   const cached = cache.get(ck);
   if (cached) return { ok: true, result: cached as EnrichedResult, source: "cache" };
 
-  const local = department ? null : resolveLocal(q, getIndex());
-  if (department) {
-    const result = fullResult(q, fullMatches(q, department));
+  const local = resolveLocal(q, getIndex());
+  if (local && (!department || local.branch === "금액")) {
+    const result = enrichLegacy(local, q, department);
     cache.set(ck, result);
-    return { ok: true, result, source: result.found ? "full" : "none" };
+    return { ok: true, result, source: "local" };
   }
-  const result = local ? enrichLegacy(local, q) : fullResult(q, fullMatches(q));
-  cache.set(ck, result);
-  return { ok: true, result, source: local ? "local" : result.found ? "full" : "none" };
+  const scopedResult = fullResult(q, fullMatches(q, department));
+  cache.set(ck, scopedResult);
+  return { ok: true, result: scopedResult, source: scopedResult.found ? "full" : "none" };
 }

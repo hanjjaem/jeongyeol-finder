@@ -11,6 +11,8 @@ export type Result = {
   drafter: string;
   reason: string;
   note: string;
+  branch?: string;
+  condition?: string;
 };
 
 const norm = (s: string) => s.toLowerCase().replace(/[\s·,()>＞"'`\-–—.·]/g, "");
@@ -57,8 +59,10 @@ function direct(it: Item, r: Row): Result {
     options: [],
     approver: r["전결권자"],
     drafter: r["기안권자"],
-    reason: `${it.cat} · ${it.key}`,
+    reason: `${it.cat} · ${it.key}${r["분기조건"] ? ` · ${r["분기조건"]}` : ""}`,
     note: r["비고"] || "",
+    branch: r["분기기준"],
+    condition: r["분기조건"] || "",
   };
 }
 
@@ -113,7 +117,7 @@ function buildResult(it: Item, query: string): Result {
 }
 
 function parseAmount(query: string): number | null {
-  const compact = query.replace(/\s+/g, "");
+  const compact = query.replace(/[\s,]/g, "");
   let amount = 0;
   let matched = false;
 
@@ -121,13 +125,21 @@ function parseAmount(query: string): number | null {
     amount += Number(m[1]) * 100_000_000;
     matched = true;
   }
-  for (const m of compact.matchAll(/(\d+(?:\.\d+)?)천만(?:원)?/g)) {
-    amount += Number(m[1]) * 10_000_000;
-    matched = true;
-  }
-  for (const m of compact.matchAll(/(\d+(?:\.\d+)?)만(?:원)?/g)) {
-    if (m[0].includes("천만")) continue;
-    amount += Number(m[1]) * 10_000;
+
+  // '3천1백만원', '5천만원', '5628만원'처럼 만원 단위 안에서
+  // 천·백·십이 조합된 표현을 모두 원 단위 숫자로 바꾼다.
+  for (const m of compact.matchAll(/((?:\d+(?:\.\d+)?(?:천|백|십)?)+)만(?:원)?/g)) {
+    const section = m[1];
+    let man = 0;
+    if (/^\d+(?:\.\d+)?$/.test(section)) {
+      man = Number(section);
+    } else {
+      for (const part of section.matchAll(/(\d+(?:\.\d+)?)(천|백|십)?/g)) {
+        const multiplier = part[2] === "천" ? 1_000 : part[2] === "백" ? 100 : part[2] === "십" ? 10 : 1;
+        man += Number(part[1]) * multiplier;
+      }
+    }
+    amount += man * 10_000;
     matched = true;
   }
 
@@ -141,8 +153,63 @@ function inAmountRange(r: Row, amount: number): boolean {
   const upperText = r["금액상한"];
   const lower = lowerText ? Number(lowerText) : Number.NEGATIVE_INFINITY;
   const upper = upperText ? Number(upperText) : Number.POSITIVE_INFINITY;
-  const passesLower = lower > 0 ? amount > lower : amount >= lower;
+  const lowerInclusive = (r["분기조건"] || "").includes("이상");
+  const passesLower = lower > 0 ? (lowerInclusive ? amount >= lower : amount > lower) : amount >= lower;
   return passesLower && amount <= upper;
+}
+
+const GENERIC_BRANCH_TOKENS = new Set([
+  "금액", "추정금액", "예정금액", "변경금액", "기준", "이하", "이상", "초과", "미만",
+  "경우", "사항", "집행", "지정", "이외의", "또는",
+]);
+
+function branchScore(r: Row, nq: string): number {
+  const condition = (r["분기조건"] || "").split("/")[0];
+  const tokens = condition
+    .replace(/^\s*[가-힣]\.|\(\d+\)/g, " ")
+    .replace(/[\d,.]+\s*(?:억|천|백|십|만)?원?/g, " ")
+    .split(/[\s·,()>＜~+\-/]+/)
+    .map(norm)
+    .filter((token) => token.length >= 2 && !GENERIC_BRANCH_TOKENS.has(token));
+
+  let score = 0;
+  for (const token of tokens) {
+    if (nq.includes(token)) score += token.length >= 3 ? 30 : 15;
+  }
+  if (condition.includes("이외의 집행") && nq.includes("기타")) score += 30;
+  return score;
+}
+
+function amountChoice(matches: Array<{ item: Item; row: Row; score: number }>): Result {
+  const item = matches[0].item;
+  return {
+    found: true,
+    task: item.key,
+    needsChoice: true,
+    question: "해당하는 업무 종류를 선택하세요",
+    options: cleanOptions(matches.map((match) => match.row)),
+    approver: "",
+    drafter: "",
+    reason: `${item.cat} · ${item.key}`,
+    note: "",
+    branch: "금액",
+  };
+}
+
+function amountGap(item: Item, rows: Row[]): Result {
+  const notes = [...new Set(rows.map((row) => row["비고"]).filter(Boolean))];
+  return {
+    found: true,
+    task: item.key,
+    needsChoice: false,
+    question: "",
+    options: [],
+    approver: "원문 미규정",
+    drafter: rows[0]?.["기안권자"] || "",
+    reason: `${item.cat} · ${item.key}`,
+    note: notes.join(" · ") || "입력한 금액은 원문에 규정된 구간을 벗어납니다.",
+    branch: "금액",
+  };
 }
 
 function resolveAmount(query: string, index: Index): Result | null {
@@ -150,25 +217,37 @@ function resolveAmount(query: string, index: Index): Result | null {
   if (amount === null) return null;
 
   const nq = norm(query);
-  const matches: Array<{ item: Item; row: Row; score: number }> = [];
+  const candidates: Array<{ item: Item; row: Row; score: number; branchScore: number }> = [];
   for (const item of index.items) {
     if (item.rows[0]?.["분기기준"] !== "금액") continue;
     const itemScore = score(item, nq);
     if (itemScore <= 0) continue;
     for (const row of item.rows) {
-      if (inAmountRange(row, amount)) matches.push({ item, row, score: itemScore });
+      const rowBranchScore = branchScore(row, nq);
+      candidates.push({ item, row, score: itemScore + rowBranchScore, branchScore: rowBranchScore });
     }
   }
-  if (matches.length === 0) return null;
+  if (candidates.length === 0) return null;
 
-  const approvers = new Set(matches.map((m) => m.row["전결권자"]));
-  if (approvers.size === 1) {
-    matches.sort((a, b) => b.score - a.score);
-    return direct(matches[0].item, matches[0].row);
+  const strongestBranchScore = Math.max(...candidates.map((candidate) => candidate.branchScore));
+  const relevant = strongestBranchScore > 0
+    ? candidates.filter((candidate) => candidate.branchScore === strongestBranchScore)
+    : candidates;
+  const matches = relevant.filter((candidate) => inAmountRange(candidate.row, amount));
+  if (matches.length === 0) {
+    const sameItem = relevant.every((candidate) => candidate.item === relevant[0].item);
+    if (strongestBranchScore > 0 && sameItem) {
+      return amountGap(relevant[0].item, relevant.map((candidate) => candidate.row));
+    }
+    return null;
   }
 
   matches.sort((a, b) => b.score - a.score);
-  if (matches[0].score - matches[1].score >= 80) return direct(matches[0].item, matches[0].row);
+  const bestScore = matches[0].score;
+  const best = matches.filter((match) => match.score === bestScore);
+  const approvers = new Set(best.map((match) => match.row["전결권자"]));
+  if (approvers.size === 1) return direct(best[0].item, best[0].row);
+  if (best.every((match) => match.item === best[0].item)) return amountChoice(best);
   return null;
 }
 
