@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { getDepartments } from "../lib/fullData";
 import { lookup, type SourceEvidence } from "../lib/lookup";
-import { withBase } from "../lib/basePath";
 
 type Option = { label: string; approver: string; drafter?: string; note?: string; evidence?: SourceEvidence };
 
@@ -261,7 +260,7 @@ export default function Home() {
                     <div className="wonmun__foot">
                       <span className="wonmun__legend">★ 기안 · ● 전결</span>
                       <div className="wonmun__links">
-                        <a className="wonmun__link" href={withBase("/byeolpyo2-samujeongyeol.xlsx")} target="_blank" rel="noopener noreferrer">배포된 엑셀 파일 열기 ↗</a>
+                        <a className="wonmun__link" href="https://www.law.go.kr/ordinSc.do?menuId=3&subMenuId=27&tabMenuId=139&eventGubun=060116" target="_blank" rel="noopener noreferrer">자치법규 시스템에서 원문 확인 ↗</a>
                         {evidence && <span className="wonmun__source-note">표시된 행과 파일 버전은 별도 대조 필요</span>}
                       </div>
                     </div>
