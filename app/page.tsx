@@ -260,7 +260,8 @@ export default function Home() {
                     <div className="wonmun__foot">
                       <span className="wonmun__legend">★ 기안 · ● 전결</span>
                       <div className="wonmun__links">
-                        <a className="wonmun__link" href="https://www.law.go.kr/ordinSc.do?menuId=3&subMenuId=27&tabMenuId=139&eventGubun=060116" target="_blank" rel="noopener noreferrer">자치법규 시스템에서 원문 확인 ↗</a>
+                        <a className="wonmun__link" href="https://www.law.go.kr/자치법규/부산광역시동구사무전결처리규칙" target="_blank" rel="noopener noreferrer">사무전결처리 규칙 원문 보기 ↗</a>
+                        <span className="wonmun__source-note">규칙에서 [별표 2]를 내려받아 확인하세요</span>
                         {evidence && <span className="wonmun__source-note">표시된 행과 파일 버전은 별도 대조 필요</span>}
                       </div>
                     </div>
