@@ -50,7 +50,7 @@ lib/resolve.ts              키워드·금액·직급·조건 분기 결정 로�
 lib/table.ts                생성 데이터 로딩
 lib/tableData.generated.ts  CSV에서 생성되는 파일
 lib/fullData.ts             원문 지연 로딩·부서 목록
-scripts/gen-table.mjs       CSV → TypeScript 배열 변환
+scripts/gen-table.mjs       CSV → TypeScript 배열 변환 (원문행 ★○ 대조 포함)
 scripts/gen-full-data.mjs   records.json → 원문 생성물 (--check: 버전 확인)
 data/전결_검색테이블_통합.csv 검색 데이터 원천
 test/                       로컬 검색·분기·데이터 테스트
@@ -82,6 +82,19 @@ npm run build     # 정적 산출물(out/) 생성
 2. `npm run data:full`로 생성물을 갱신합니다. 다른 위치의 JSON은 `node scripts/gen-full-data.mjs --input <경로>`를 사용합니다.
 3. `npm run data:check`로 생성물과 원본의 해시가 같은지 확인합니다. 배포 전에도 실행합니다.
 4. `npm test`와 `npm run build`를 실행하고, 변경된 데이터·생성 파일·검증 결과를 함께 기록합니다.
+
+### 169행 검색테이블의 원문행·판단구분
+
+169행 검색테이블은 별표 2 공통사항 시트를 AI로 전처리해 만든 표입니다. 각 줄의 `원문행`(예: `공통사항:62`)은 결과 화면의 원문 발췌로 그대로 쓰이고, `npm run data:build`(빌드에 포함)가 그 행이 전체 원문에 있고 ★○ 표시와 기안권자·전결권자가 맞는지 확인합니다. 어긋나면 빌드가 멈춥니다.
+
+| 판단구분 | 뜻 | 대조 |
+|---|---|---|
+| 원문 | 원문 행 ★○ 그대로 | 기안·전결 모두 |
+| 해석 | 원문에 없는 업무를 적힌 행에 준용(예: 관내출장 → 나목) | 기안·전결 모두 |
+| 단독전결 | 원문은 ○만 있고 ★ 없음 | 전결만 |
+| 셀 내 조건 | 원문 칸 글 속 예외(예: "정기물은 담당자") | 행 존재만 |
+
+원문이 개정되어 행 번호가 바뀌면 이 검사에서 걸리므로 `원문행`을 함께 고칩니다.
 
 ## 배포
 

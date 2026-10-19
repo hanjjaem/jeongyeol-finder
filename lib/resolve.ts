@@ -1,6 +1,6 @@
 import type { Row } from "./table";
 
-export type Option = { label: string; approver: string; drafter: string; note: string };
+export type Option = { label: string; approver: string; drafter: string; note: string; reason?: string; query?: string; source?: string; basis?: string };
 export type Result = {
   found: boolean;
   task: string;
@@ -13,6 +13,8 @@ export type Result = {
   note: string;
   branch?: string;
   condition?: string;
+  source?: string; // 원문행 (예: 공통사항:62)
+  basis?: string; // 판단구분: 원문 · 해석 · 단독전결 · 셀 내 조건
 };
 
 const norm = (s: string) => s.toLowerCase().replace(/[\s·,()>＞"'`\-–—.·]/g, "");
@@ -63,6 +65,8 @@ function direct(it: Item, r: Row): Result {
     note: r["비고"] || "",
     branch: r["분기기준"],
     condition: r["분기조건"] || "",
+    source: r["원문행"],
+    basis: r["판단구분"],
   };
 }
 
@@ -272,7 +276,7 @@ function cleanOptions(rows: Row[]): Option[] {
     const parts = partsList[ri];
     const picked = uniform ? keep.map((i) => parts[i]) : parts;
     const label = picked.join(" · ").replace(/\(\d+\)\s*/g, "").trim();
-    return { label, approver: r["전결권자"], drafter: r["기안권자"], note: r["비고"] || "" };
+    return { label, approver: r["전결권자"], drafter: r["기안권자"], note: r["비고"] || "", source: r["원문행"], basis: r["판단구분"] };
   });
 }
 
@@ -311,4 +315,14 @@ export function resolveLocal(query: string, index: Index): Result | null {
   const keywordUnique = bestScore >= 8 && margin >= 6; // 키워드 강하게 일치 + 비모호
   if (exact || strongUnique || keywordUnique) return buildResult(best, query);
   return null;
+}
+
+// 질문이 여러 검색키의 일부라 하나로 못 정할 때(예: 출장 → 관내출장·관외출장·출장보고)
+// 그 검색키들을 돌려준다. 각 키는 단독 검색으로 풀리는 것만 남긴다.
+export function ambiguousKeys(query: string, index: Index): string[] {
+  const nq = norm(query);
+  if (nq.length < 2) return [];
+  const keys = [...new Set(index.items.filter((it) => norm(it.key).includes(nq)).map((it) => it.key))];
+  if (keys.length < 2 || keys.length > 6) return [];
+  return keys.every((key) => resolveLocal(key, index)) ? keys : [];
 }

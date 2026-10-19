@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import { getDepartments, loadFullRecords } from "../lib/fullData";
 import { lookup, type SourceEvidence } from "../lib/lookup";
 
-type Option = { label: string; approver: string; drafter?: string; note?: string; evidence?: SourceEvidence };
+type Option = { label: string; approver: string; drafter?: string; note?: string; reason?: string; query?: string; basis?: string; evidence?: SourceEvidence };
 
-const RANKS = ["담당자", "팀장", "실·단·과장", "국·소장", "부구청장", "구청장"];
-function rankMark(rank: string, drafter?: string, approver?: string) {
-  const drafters = (drafter ?? "").split(",").map((s) => s.trim());
-  return `${drafters.includes(rank) ? "★" : ""}${approver === rank ? "●" : ""}`;
-}
+// 검색표 판단구분 중 원문 ★○만으로는 설명되지 않는 경우의 안내
+const BASIS_NOTE: Record<string, string> = {
+  해석: "이 업무는 원문에 직접 없어요. 아래 원문 행을 준용한 결과입니다(참고 내용 확인).",
+  "셀 내 조건": "원문 칸 글 속(괄호 안) 조건에 따른 결과입니다. 아래 표의 ●는 기본 경우예요.",
+};
 type Result = {
   found: boolean;
   task?: string;
@@ -24,6 +24,7 @@ type Result = {
   departments?: string[];
   fullSearch?: boolean;
   unmatched?: string[];
+  basis?: string;
 };
 
 // 사무전결처리 규칙 제4조②·③, 제5조 — 별표 2에 없는 업무의 판단 기준
@@ -75,16 +76,13 @@ export default function Home() {
   const approver = chosen !== null ? opts[chosen]?.approver : result?.approver;
   const noteText = chosen !== null ? opts[chosen]?.note : result?.note;
   const drafter = chosen !== null ? opts[chosen]?.drafter : result?.drafter;
+  const reasonText = (chosen !== null ? opts[chosen]?.reason : undefined) ?? result?.reason;
   const evidence = chosen !== null ? opts[chosen]?.evidence : result?.evidence?.[0];
-  const unit = evidence?.category ?? (result?.reason ?? "").split(" · ")[0] ?? "";
-  const detail = evidence?.taskRaw ?? result?.task ?? "";
-  const displayRanks = evidence?.marks.length
-    ? [...new Set(evidence.marks.map((mark) => mark.rank))]
-    : RANKS;
-  const markForRank = (rank: string) => {
-    if (!evidence) return rankMark(rank, drafter, approver);
-    return evidence.marks.filter((mark) => mark.rank === rank).map((mark) => mark.symbol === "○" ? "●" : "★").join("");
-  };
+  const basis = chosen !== null ? opts[chosen]?.basis : result?.basis;
+  const basisNote = basis ? BASIS_NOTE[basis] : undefined;
+  const displayRanks = evidence ? [...new Set(evidence.marks.map((mark) => mark.rank))] : [];
+  const markForRank = (rank: string) =>
+    (evidence?.marks ?? []).filter((mark) => mark.rank === rank).map((mark) => mark.symbol === "○" ? "●" : "★").join("");
 
   return (
     <div className="app">
@@ -183,7 +181,7 @@ export default function Home() {
                   <h3>{result.question || "조건을 선택하세요"}</h3>
                   <div className="choices">
                     {opts.map((o, i) => (
-                      <button className="choice" key={i} onClick={() => setChosen(i)}>
+                      <button className="choice" key={i} onClick={() => (o.query ? search(o.query) : setChosen(i))}>
                         <span className="choice__label">{o.label}</span>
                         <span className="choice__arrow" aria-hidden>›</span>
                       </button>
@@ -214,10 +212,10 @@ export default function Home() {
                         </span>
                       </div>
                     ) : null}
-                    {result.reason && (
+                    {reasonText && (
                       <div className="rbox">
                         <span className="rbox__tab rbox__tab--reason">근거</span>
-                        <span className="rbox__v">{result.reason}</span>
+                        <span className="rbox__v">{reasonText}</span>
                       </div>
                     )}
                     {noteText && (
@@ -236,6 +234,8 @@ export default function Home() {
 
                   <div className="wonmun">
                     <div className="wonmun__divider">사무전결사항 [별표 2]</div>
+                    {basisNote && <div className="no-result__guide">{basisNote}</div>}
+                    {evidence ? (
                     <div className="xl">
                       <div className="xl__bar">
                         <span className="xl__glyph">▦</span>
@@ -261,9 +261,9 @@ export default function Home() {
                           </thead>
                           <tbody>
                             <tr>
-                              <th className="xl__rownum">{evidence?.sourceRow ?? 3}</th>
-                              <td className="xl__unit">{unit}</td>
-                              <td className="xl__detail">{detail}</td>
+                              <th className="xl__rownum">{evidence.sourceRow}</th>
+                              <td className="xl__unit">{evidence.category}</td>
+                              <td className="xl__detail">{evidence.taskRaw}</td>
                               {displayRanks.map((rk) => (
                                 <td key={rk} className="xl__mark">{markForRank(rk)}</td>
                               ))}
@@ -272,9 +272,12 @@ export default function Home() {
                         </table>
                       </div>
                       <div className="xl__tabs">
-                        <span className="xl__tab xl__tab--active">{evidence?.sourceSheet ?? "공통사항"}</span>
+                        <span className="xl__tab xl__tab--active">{evidence.sourceSheet}</span>
                       </div>
                     </div>
+                    ) : (
+                      <div className="no-result__guide">이 결과에는 연결된 원문 행이 없어요. 아래 링크에서 [별표 2] 원문을 확인하세요.</div>
+                    )}
                     <div className="wonmun__foot">
                       <span className="wonmun__legend">★ 기안 · ● 전결</span>
                       <div className="wonmun__links">

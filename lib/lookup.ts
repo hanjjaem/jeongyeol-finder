@@ -1,6 +1,6 @@
 // query → 결정형 전결 조회. 외부 네트워크·LLM 호출 없이 로컬 표만 사용한다.
 import { parseTable } from "./table";
-import { buildIndex, resolveLocal, type Index, type Result } from "./resolve";
+import { ambiguousKeys, buildIndex, resolveLocal, type Index, type Option, type Result } from "./resolve";
 import { loadFullRecords, type FullRecord } from "./fullData";
 
 export type SourceEvidence = {
@@ -19,7 +19,9 @@ export type SourceEvidence = {
   issues: string[];
 };
 
-export type EnrichedResult = Result & {
+export type EnrichedOption = Option & { evidence?: SourceEvidence };
+export type EnrichedResult = Omit<Result, "options"> & {
+  options: EnrichedOption[];
   evidence?: SourceEvidence[];
   department?: string;
   departments?: string[];
@@ -66,11 +68,34 @@ function getIndex(): Index {
 }
 
 const cache = new Map<string, Result>();
-type FullIndex = { record: FullRecord; text: string }[];
+// text: 대분류·전체 경로·행 원문, near: 행 원문과 바로 위 제목
+type FullIndex = { record: FullRecord; text: string; near: string }[];
 let _fullIndex: FullIndex | null = null;
 async function getFullIndex(): Promise<FullIndex> {
-  if (!_fullIndex) _fullIndex = (await loadFullRecords()).map((record) => ({ record, text: compact([record.category.text, ...record.path.map((entry) => entry.text), record.task_raw].join(" ")) }));
+  if (!_fullIndex) _fullIndex = (await loadFullRecords()).map((record) => ({
+    record,
+    text: compact([record.category.text, ...record.path.map((entry) => entry.text), record.task_raw].join(" ")),
+    near: compact([parentText(record), record.task_raw].join(" ")),
+  }));
   return _fullIndex;
+}
+
+function parentText(record: FullRecord): string {
+  return record.path.length >= 2 ? record.path[record.path.length - 2].text.trim() : "";
+}
+
+const ISSUE_TEXT: Record<string, string> = {
+  no_marks: "원문에 결재 표시가 없는 행",
+  no_drafter_mark: "원문에 기안자(★) 표시가 없음",
+  unrecognized_hierarchy: "원문 항목 단계를 확인하지 못함",
+};
+
+function issueNote(record: FullRecord): string {
+  return record.issues.length ? `원문 확인 필요: ${record.issues.map((issue) => ISSUE_TEXT[issue] ?? issue).join(", ")}` : "";
+}
+
+function recordReason(record: FullRecord): string {
+  return `${record.category.text} · ${record.path.map((entry) => entry.text.trim()).join(" › ")}`;
 }
 const keyOf = (q: string, department?: string) => `${department ?? ""}|${q.trim().toLowerCase().replace(/\s+/g, "")}`;
 
@@ -99,7 +124,8 @@ function toEvidence(record: FullRecord): SourceEvidence {
 function fullMatches(fullIndex: FullIndex, query: string, department?: string): FullRecord[] {
   const tokens = query.split(/\s+/).map(compact).filter(Boolean);
   return fullIndex
-    .filter(({ record, text }) => (!department || record.department_scope === department) && tokens.every((token) => text.includes(token)))
+    // 최상위 제목에만 걸린 행(예: "휴가, 출장, 특근 등" 밑의 시간외근무)은 빼려고, 한 단어 이상은 행 자신이나 바로 위 제목에 있어야 한다.
+    .filter(({ record, text, near }) => (!department || record.department_scope === department) && tokens.every((token) => text.includes(token)) && tokens.some((token) => near.includes(token)))
     .map(({ record }) => record);
 }
 
@@ -127,8 +153,8 @@ function directFull(record: FullRecord): EnrichedResult {
     options: [],
     approver: record.approver.join(", "),
     drafter: record.drafter.join(", "),
-    reason: `${record.category.text} · ${record.task}`,
-    note: "",
+    reason: recordReason(record),
+    note: issueNote(record),
     evidence: [toEvidence(record)],
     department: record.department_scope,
     departments: [record.department_scope],
@@ -136,17 +162,25 @@ function directFull(record: FullRecord): EnrichedResult {
   };
 }
 
-function fullResult(query: string, records: FullRecord[]): EnrichedResult {
+function fullOption(record: FullRecord) {
+  const parent = parentText(record);
+  return {
+    label: `${record.department_scope} · ${parent ? `${parent} › ` : ""}${record.task}`,
+    approver: record.approver.join(", "),
+    drafter: record.drafter.join(", "),
+    note: issueNote(record),
+    reason: recordReason(record),
+    evidence: toEvidence(record),
+  };
+}
+
+function fullResult(query: string, matched: FullRecord[]): EnrichedResult {
+  // 결재 표시(★○)가 없는 제목 행은 고를 수 있는 결과가 아니므로 뺀다.
+  const records = matched.filter((record) => record.marks.length > 0);
   if (records.length === 0) return notFound(query);
   if (records.length === 1) return directFull(records[0]);
 
-  const options = records.slice(0, 50).map((record) => ({
-    label: `${record.department_scope} · ${record.task}`,
-    approver: record.approver.join(", "),
-    drafter: record.drafter.join(", "),
-    note: record.issues.length ? `검토 필요: ${record.issues.join(", ")}` : "",
-    evidence: toEvidence(record),
-  }));
+  const options = records.slice(0, 50).map(fullOption);
   return {
     found: true,
     task: query,
@@ -163,33 +197,39 @@ function fullResult(query: string, records: FullRecord[]): EnrichedResult {
   };
 }
 
-function enrichLegacy(fullIndex: FullIndex, result: Result, query: string, department?: string): EnrichedResult {
-  const records = fullMatches(fullIndex, result.task, department);
-  const sameRole = (record: FullRecord) => {
-    const approver = record.approver.join(",");
-    const drafter = record.drafter.join(",");
-    return compact(approver) === compact(result.approver) && compact(drafter) === compact(result.drafter);
+// 공통사항 검색키 선택지(고르면 그 검색키로 다시 검색, option.query) 뒤에 다른 부서 원문 후보를 붙인다.
+// 169행 검색표가 공통사항 시트를 옮긴 것이라 공통사항 원문 행은 중복으로 보고 뺀다.
+function keyChoice(query: string, keys: string[], matched: FullRecord[]): EnrichedResult {
+  const others = matched.filter((record) => record.marks.length > 0 && record.department_scope !== "공통사항");
+  const keyOptions = keys.map((key) => ({ label: `공통사항 · ${key}`, approver: "", drafter: "", note: "", query: key }));
+  return {
+    found: true,
+    task: query,
+    needsChoice: true,
+    question: "어떤 업무인가요?",
+    options: [...keyOptions, ...others.slice(0, 50 - keyOptions.length).map(fullOption)],
+    approver: "",
+    drafter: "",
+    reason: "",
+    note: "",
   };
-  const conditionNeedle = compact((result.condition || "").split("/")[0].replace(/^\s*[가-힣]\.\s*/, ""));
-  const sameCondition = (record: FullRecord) => {
-    if (!conditionNeedle) return false;
-    const evidenceText = compact([record.task_raw, ...record.path.map((entry) => entry.text)].join(" "));
-    return evidenceText.includes(conditionNeedle);
-  };
-  const ordered = [...records].sort((a, b) => {
-    const priority = (record: FullRecord) => sameCondition(record) && sameRole(record) ? 0 : sameCondition(record) ? 1 : sameRole(record) ? 2 : 3;
-    return priority(a) - priority(b);
-  });
+}
+
+// 169행 결과에는 검색표에 적힌 원문행(source)을 그대로 근거로 붙인다. 글자 맞추기로 추측하지 않는다.
+function enrichLegacy(fullIndex: FullIndex, result: Result, department?: string): EnrichedResult {
+  const recordOf = (id?: string) => (id ? fullIndex.find(({ record }) => record.id === id)?.record : undefined);
   const options = result.options.map((option) => {
-    const label = compact(option.label);
-    const candidate = records.find((record) => compact([record.task_raw, ...record.path.map((entry) => entry.text)].join(" ")).includes(label) && compact(record.approver.join(",")) === compact(option.approver));
-    return candidate ? { ...option, evidence: toEvidence(candidate) } : option;
+    const record = recordOf(option.source);
+    return record ? { ...option, evidence: toEvidence(record) } : option;
   });
+  const records = [recordOf(result.source), ...options.map((option) => recordOf(option.source))]
+    .filter((record): record is FullRecord => Boolean(record))
+    .filter((record, index, list) => list.findIndex((other) => other.id === record.id) === index);
   return {
     ...result,
     options,
-    evidence: ordered.slice(0, 50).map(toEvidence),
-    departments: [...new Set(ordered.map((record) => record.department_scope))],
+    evidence: records.map(toEvidence),
+    departments: [...new Set(records.map((record) => record.department_scope))],
     department,
   };
 }
@@ -205,7 +245,13 @@ export async function lookup(query: string, department?: string): Promise<Lookup
   const fullIndex = await getFullIndex();
   const local = resolveLocal(q, getIndex());
   if (local && (!department || local.branch === "금액")) {
-    const result = withUnmatched(q, enrichLegacy(fullIndex, local, q, department));
+    const result = withUnmatched(q, enrichLegacy(fullIndex, local, department));
+    cache.set(ck, result);
+    return { ok: true, result, source: "local" };
+  }
+  const keys = department ? [] : ambiguousKeys(q, getIndex());
+  if (keys.length) {
+    const result = keyChoice(q, keys, fullMatches(fullIndex, q));
     cache.set(ck, result);
     return { ok: true, result, source: "local" };
   }
