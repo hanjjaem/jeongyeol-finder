@@ -6,9 +6,9 @@ import { lookup, type SourceEvidence } from "../lib/lookup";
 type Option = { label: string; approver: string; drafter?: string; note?: string; reason?: string; query?: string; basis?: string; evidence?: SourceEvidence };
 
 // 검색표 판단구분 중 원문 ★○만으로는 설명되지 않는 경우의 안내
-const BASIS_NOTE: Record<string, string> = {
-  해석: "이 업무는 원문에 직접 없어요. 아래 원문 행을 준용한 결과입니다(참고 내용 확인).",
-  "셀 내 조건": "원문 칸 글 속(괄호 안) 조건에 따른 결과입니다. 아래 표의 ●는 기본 경우예요.",
+const BASIS_NOTE: Record<string, (task: string) => string> = {
+  해석: (task) => `원문에 「${task}」 항목은 따로 없어요. 비슷한 업무인 아래 원문 행을 적용한 해석입니다(규칙 제4조②).`,
+  "셀 내 조건": () => "원문 칸 글 속(괄호 안) 조건에 따른 결과입니다. 아래 표의 ●는 기본 경우예요.",
 };
 type Result = {
   found: boolean;
@@ -79,7 +79,7 @@ export default function Home() {
   const reasonText = (chosen !== null ? opts[chosen]?.reason : undefined) ?? result?.reason;
   const evidence = chosen !== null ? opts[chosen]?.evidence : result?.evidence?.[0];
   const basis = chosen !== null ? opts[chosen]?.basis : result?.basis;
-  const basisNote = basis ? BASIS_NOTE[basis] : undefined;
+  const basisNote = basis ? BASIS_NOTE[basis]?.(result?.task ?? "") : undefined;
   const displayRanks = evidence ? [...new Set(evidence.marks.map((mark) => mark.rank))] : [];
   const markForRank = (rank: string) =>
     (evidence?.marks ?? []).filter((mark) => mark.rank === rank).map((mark) => mark.symbol === "○" ? "●" : "★").join("");
@@ -263,7 +263,7 @@ export default function Home() {
                             <tr>
                               <th className="xl__rownum">{evidence.sourceRow}</th>
                               <td className="xl__unit">{evidence.category}</td>
-                              <td className="xl__detail">{evidence.taskRaw}</td>
+                              <td className="xl__detail">{[...evidence.path.slice(0, -1), evidence.taskRaw].join(" › ")}</td>
                               {displayRanks.map((rk) => (
                                 <td key={rk} className="xl__mark">{markForRank(rk)}</td>
                               ))}
