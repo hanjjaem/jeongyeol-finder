@@ -66,3 +66,29 @@ describe("lookup() — 전체 원문 후보와 근거", () => {
     }
   });
 });
+
+describe("lookup() — 원문에 없는 말 표시", () => {
+  it("일부 단어만 맞으면 원문에 없는 말을 알려준다", async () => {
+    const response = await lookup("5천만원 이하 용역 제안서 평가 심의 결과 보고");
+    expect(response.ok).toBe(true);
+    if (response.ok) {
+      expect(response.result.approver).toBe("국·소장");
+      expect(response.result.unmatched).toEqual(["제안서", "평가", "심의", "결과", "보고"]);
+    }
+  });
+
+  it.each(["병가", "예산의 변경", "4천만원 용역"])("'%s'처럼 원문과 맞는 질문에는 표시하지 않는다", async (query) => {
+    const response = await lookup(query);
+    expect(response.ok).toBe(true);
+    if (response.ok) expect(response.result.unmatched).toBeUndefined();
+  });
+
+  it("찾지 못한 질문에는 표시하지 않는다", async () => {
+    const response = await lookup("도무지모르겠는 xyz123 질의");
+    expect(response.ok).toBe(true);
+    if (response.ok) {
+      expect(response.result.found).toBe(false);
+      expect(response.result.unmatched).toBeUndefined();
+    }
+  });
+});

@@ -23,7 +23,12 @@ type Result = {
   evidence?: SourceEvidence[];
   departments?: string[];
   fullSearch?: boolean;
+  unmatched?: string[];
 };
+
+// 사무전결처리 규칙 제4조②·③, 제5조 — 별표 2에 없는 업무의 판단 기준
+const UNLISTED_GUIDE =
+  "별표에 없는 업무는 비슷한 업무의 전결권자를 기준으로 판단합니다(제4조②). 이미 결재받은 일에 딸린 업무는 한 단계 아래에서 전결할 수 있고(제4조③), 중요하면 상급자 결재로 올릴 수 있습니다(제5조). 애매하면 소관 국·실장의 지시를 받으세요.";
 
 const EXAMPLES = ["병가", "경미한 출장보고", "예산의 변경", "관내출장"];
 const DEPARTMENTS = ["전체 부서", ...getDepartments()];
@@ -159,6 +164,7 @@ export default function Home() {
                     이 도구는 <b>별표2에 실린 업무</b>의 전결권자만 알려드려요. 표에 없는 사항은
                     별도 규정·지침이나 담당부서 소관일 수 있어요. (표현을 바꿔 다시 검색해도 좋아요.)
                   </div>
+                  <div className="no-result__guide">{UNLISTED_GUIDE}</div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: "#94a3b8", marginBottom: 10 }}>
                     이런 업무는 바로 검색돼요 ↓
                   </div>
@@ -199,6 +205,15 @@ export default function Home() {
                       <span className="rbox__tab rbox__tab--answer">전결권자</span>
                       <span className="rbox__v">{approver || "—"}</span>
                     </div>
+                    {result.unmatched?.length ? (
+                      <div className="rbox rbox--warn">
+                        <span className="rbox__tab rbox__tab--warn">확인</span>
+                        <span className="rbox__v">
+                          입력한 말 중 「{result.unmatched.join("·")}」은(는) 규정 원문에 없어요. 위는 가장 가까운 규정입니다.
+                          <span className="rbox__sub">{UNLISTED_GUIDE}</span>
+                        </span>
+                      </div>
+                    ) : null}
                     {result.reason && (
                       <div className="rbox">
                         <span className="rbox__tab rbox__tab--reason">근거</span>

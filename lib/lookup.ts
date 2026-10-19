@@ -24,7 +24,36 @@ export type EnrichedResult = Result & {
   department?: string;
   departments?: string[];
   fullSearch?: boolean;
+  unmatched?: string[]; // 질문 중 근거 원문에 없는 말 — 가장 가까운 규정으로 안내했다는 표시
 };
+
+// 금액·비교어·흔한 조사는 원문과 대조하지 않는다.
+const IGNORED_WORDS = new Set(["이하", "이상", "초과", "미만", "관련", "대한", "위한", "경우", "및", "등", "건"]);
+const PARTICLE = /(에서|으로|에게|에|의|을|를|은|는|이|가|로|와|과|도)$/;
+
+function unmatchedWords(query: string, result: EnrichedResult): string[] {
+  const haystack = compact([
+    result.task,
+    result.reason,
+    result.condition ?? "",
+    result.note,
+    ...result.options.map((option) => option.label),
+    ...(result.evidence ?? []).flatMap((evidence) => [evidence.category, evidence.taskRaw, ...evidence.path]),
+  ].join(" "));
+  return query.split(/\s+/).filter((word) => {
+    if (!word || /\d/.test(word) || IGNORED_WORDS.has(word)) return false;
+    const token = compact(word);
+    if (!token || haystack.includes(token)) return false;
+    const stem = token.replace(PARTICLE, "");
+    return !(stem && haystack.includes(stem));
+  });
+}
+
+function withUnmatched(query: string, result: EnrichedResult): EnrichedResult {
+  if (!result.found) return result;
+  const unmatched = unmatchedWords(query, result);
+  return unmatched.length ? { ...result, unmatched } : result;
+}
 
 export type LookupResponse =
   | { ok: true; result: EnrichedResult; source: "local" | "cache" | "full" | "none" }
@@ -176,11 +205,11 @@ export async function lookup(query: string, department?: string): Promise<Lookup
   const fullIndex = await getFullIndex();
   const local = resolveLocal(q, getIndex());
   if (local && (!department || local.branch === "금액")) {
-    const result = enrichLegacy(fullIndex, local, q, department);
+    const result = withUnmatched(q, enrichLegacy(fullIndex, local, q, department));
     cache.set(ck, result);
     return { ok: true, result, source: "local" };
   }
-  const scopedResult = fullResult(q, fullMatches(fullIndex, q, department));
+  const scopedResult = withUnmatched(q, fullResult(q, fullMatches(fullIndex, q, department)));
   cache.set(ck, scopedResult);
   return { ok: true, result: scopedResult, source: scopedResult.found ? "full" : "none" };
 }

@@ -188,6 +188,10 @@ body::before{
 .rbox__tab--note{color:#a85d09;background:#fbecd3}
 .rbox__v{color:#12233e;font-size:16px;font-weight:750;letter-spacing:-.02em;line-height:1.5;word-break:break-word}
 .rbox__tab--source{color:#17644a;background:#dff2e8}
+.rbox__tab--warn{color:#9a3412;background:#ffedd5}
+.rbox--warn{background:#fffaf2;border-color:#fde3c3}
+.rbox__sub{display:block;margin-top:6px;color:#6b5a45;font-size:13.5px;font-weight:650;line-height:1.65}
+.no-result__guide{margin:0 auto 18px;max-width:520px;padding:12px 14px;border-radius:14px;background:#fffaf2;border:1px solid #fde3c3;color:#6b5a45;font-size:13.5px;line-height:1.7;text-align:left}
 .rbox--answer{
   background:linear-gradient(135deg,#eef2ff 0%, #f5f0ff 46%, #e6f6ff 100%);
   box-shadow:0 10px 30px rgba(31,56,88,.08), 0 0 22px rgba(91,90,255,.28), 0 0 50px rgba(124,58,237,.16);
