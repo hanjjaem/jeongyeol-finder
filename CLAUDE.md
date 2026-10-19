@@ -5,7 +5,7 @@ UX는 **단일 검색 → 결과 모달**이다. 분기(금액·직급·중요�
 Next.js(App Router) 정적 export + GitHub Pages를 사용하며, LLM·외부 API·API 키·서버 라우트는 사용하지 않는다.
 
 핵심 파일: `app/page.tsx`(검색 UI·부서 선택·근거 모달) · `lib/lookup.ts`(169행 호환 검색·전체 원문 후보) · `lib/{table,resolve}.ts` · `lib/fullData.ts` · `data/전결_검색테이블_통합.csv`
-데이터 생성: `scripts/gen-table.mjs` → `lib/tableData.generated.ts`, `scripts/gen-full-data.mjs --input <normalized-records.json>` → `lib/fullData.generated.ts`. 원리/구조는 `README.md`, 작업 기록은 `docs/superpowers/`. 디자인 컨텍스트는 `.impeccable.md`.
+데이터 생성: `scripts/gen-table.mjs` → `lib/tableData.generated.ts`, `npm run data:full`(운영 폴더 `services/jeongyeol-finder/data/normalized/records.json` → `lib/fullData.generated.ts`·`lib/fullDepartments.generated.ts`, 로컬 전용) · `npm run data:check`(원본 해시 대조). 원리/구조는 `README.md`, 작업 기록은 `docs/superpowers/`. 디자인 컨텍스트는 `.impeccable.md`.
 
 ## Design Context
 

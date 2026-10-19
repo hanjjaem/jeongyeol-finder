@@ -8,7 +8,7 @@
 - 전체 검토 데이터: `lib/fullData.generated.ts` 24개 시트·3,359개 원문 행
 - 검색 범위: 기본은 기존 결정형 검색. 부서를 선택하면 전체 원문 후보 검색
 - 결과: 전결권자, 기안권자, 원문 시트·행·셀 표시, 분기 조건, 비고
-- 원문: `public/byeolpyo2-samujeongyeol.xlsx` 정적 다운로드 링크
+- 원문: 동구 사무전결처리 규칙(자치법규 시스템) 링크와 별표 2 안내
 - 검색 실패: 규정표에 없는 업무로 안내하고 예시 검색을 제시
 
 ## 처리 흐름
@@ -22,10 +22,15 @@ lib/tableData.generated.ts
         ▼
 lib/resolve.ts 결정형 검색
 
-services/jeongyeol-finder/data/normalized/records.json
-        │ scripts/gen-full-data.mjs --input <path>
+[운영 폴더] D:\00.hjr\빅데이터플랫폼\2026\운영\services\jeongyeol-finder\
+  data/(별표 2) 사무전결사항(제4조관련) (1).xlsx   원본 엑셀
+        │ scripts/normalize_workbook.py (Python)
         ▼
-lib/fullData.generated.ts
+  data/normalized/records.json                   원문 정규화 원본
+        │ npm run data:full (이 저장소, 로컬 전용)
+        ▼
+lib/fullData.generated.ts          원문 3,359행 — 첫 화면 뒤 별도 청크로 로딩
+lib/fullDepartments.generated.ts   부서 목록 — 첫 화면에 포함
         │ 부서 선택 또는 기존 검색 보강
         ▼
 lib/lookup.ts 전체 원문 후보·근거 검색
@@ -44,7 +49,9 @@ lib/lookup.ts               로컬 검색 오케스트레이션·캐시
 lib/resolve.ts              키워드·금액·직급·조건 분기 결정 로직
 lib/table.ts                생성 데이터 로딩
 lib/tableData.generated.ts  CSV에서 생성되는 파일
+lib/fullData.ts             원문 지연 로딩·부서 목록
 scripts/gen-table.mjs       CSV → TypeScript 배열 변환
+scripts/gen-full-data.mjs   records.json → 원문 생성물 (--check: 버전 확인)
 data/전결_검색테이블_통합.csv 검색 데이터 원천
 test/                       로컬 검색·분기·데이터 테스트
 ```
@@ -60,12 +67,21 @@ npm run build     # 정적 산출물(out/) 생성
 
 ## 데이터 갱신
 
-1. 원본 변환 절차로 `data/전결_검색테이블_통합.csv`를 생성합니다.
-2. `npm run data:build`로 `lib/tableData.generated.ts`를 재생성합니다.
-3. `npm test`와 `npm run build`를 실행합니다.
-4. 변경된 CSV·생성 파일·검증 결과를 함께 기록합니다.
+데이터 원본은 종류별로 한 곳에만 둡니다.
 
-전체 24개 시트를 추가할 때는 시트명, 부서명, 원문 행 번호, 기안·전결 표시 근거를 데이터에 보존해야 합니다. 같은 업무명이 여러 부서에 존재할 수 있으므로 부서 범위와 중복 처리 규칙도 함께 정의해야 합니다.
+| 데이터 | 원본 위치 | 반영 명령 |
+|---|---|---|
+| 169행 검색테이블 | 이 저장소 `data/전결_검색테이블_통합.csv` | `npm run data:build` (`build`에 포함) |
+| 원문 3,359행 | 운영 폴더 `data/normalized/records.json` | `npm run data:full` (로컬 전용) |
+
+운영 폴더의 같은 이름 CSV는 참고용 복사본이므로 고치지 않습니다. GitHub Actions 빌드는 운영 폴더를 볼 수 없어 커밋된 생성물만 사용하므로, 원문 생성물(`lib/fullData.generated.ts`, `lib/fullDepartments.generated.ts`)은 반드시 커밋합니다.
+
+원문 개정 시 순서:
+
+1. 운영 폴더에서 `normalize_workbook.py`·`verify_normalization.py`를 실행합니다(운영 폴더 README 참조).
+2. `npm run data:full`로 생성물을 갱신합니다. 다른 위치의 JSON은 `node scripts/gen-full-data.mjs --input <경로>`를 사용합니다.
+3. `npm run data:check`로 생성물과 원본의 해시가 같은지 확인합니다. 배포 전에도 실행합니다.
+4. `npm test`와 `npm run build`를 실행하고, 변경된 데이터·생성 파일·검증 결과를 함께 기록합니다.
 
 ## 배포
 

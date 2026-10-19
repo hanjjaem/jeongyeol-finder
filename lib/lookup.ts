@@ -1,7 +1,7 @@
 // query → 결정형 전결 조회. 외부 네트워크·LLM 호출 없이 로컬 표만 사용한다.
 import { parseTable } from "./table";
 import { buildIndex, resolveLocal, type Index, type Result } from "./resolve";
-import { getFullRecords, type FullRecord } from "./fullData";
+import { loadFullRecords, type FullRecord } from "./fullData";
 
 export type SourceEvidence = {
   id: string;
@@ -37,8 +37,12 @@ function getIndex(): Index {
 }
 
 const cache = new Map<string, Result>();
-const fullRecords = getFullRecords();
-const fullIndex = fullRecords.map((record) => ({ record, text: compact([record.category.text, ...record.path.map((entry) => entry.text), record.task_raw].join(" ")) }));
+type FullIndex = { record: FullRecord; text: string }[];
+let _fullIndex: FullIndex | null = null;
+async function getFullIndex(): Promise<FullIndex> {
+  if (!_fullIndex) _fullIndex = (await loadFullRecords()).map((record) => ({ record, text: compact([record.category.text, ...record.path.map((entry) => entry.text), record.task_raw].join(" ")) }));
+  return _fullIndex;
+}
 const keyOf = (q: string, department?: string) => `${department ?? ""}|${q.trim().toLowerCase().replace(/\s+/g, "")}`;
 
 function compact(value: string): string {
@@ -63,7 +67,7 @@ function toEvidence(record: FullRecord): SourceEvidence {
   };
 }
 
-function fullMatches(query: string, department?: string): FullRecord[] {
+function fullMatches(fullIndex: FullIndex, query: string, department?: string): FullRecord[] {
   const tokens = query.split(/\s+/).map(compact).filter(Boolean);
   return fullIndex
     .filter(({ record, text }) => (!department || record.department_scope === department) && tokens.every((token) => text.includes(token)))
@@ -130,8 +134,8 @@ function fullResult(query: string, records: FullRecord[]): EnrichedResult {
   };
 }
 
-function enrichLegacy(result: Result, query: string, department?: string): EnrichedResult {
-  const records = fullMatches(result.task, department);
+function enrichLegacy(fullIndex: FullIndex, result: Result, query: string, department?: string): EnrichedResult {
+  const records = fullMatches(fullIndex, result.task, department);
   const sameRole = (record: FullRecord) => {
     const approver = record.approver.join(",");
     const drafter = record.drafter.join(",");
@@ -169,13 +173,14 @@ export async function lookup(query: string, department?: string): Promise<Lookup
   const cached = cache.get(ck);
   if (cached) return { ok: true, result: cached as EnrichedResult, source: "cache" };
 
+  const fullIndex = await getFullIndex();
   const local = resolveLocal(q, getIndex());
   if (local && (!department || local.branch === "금액")) {
-    const result = enrichLegacy(local, q, department);
+    const result = enrichLegacy(fullIndex, local, q, department);
     cache.set(ck, result);
     return { ok: true, result, source: "local" };
   }
-  const scopedResult = fullResult(q, fullMatches(q, department));
+  const scopedResult = fullResult(q, fullMatches(fullIndex, q, department));
   cache.set(ck, scopedResult);
   return { ok: true, result: scopedResult, source: scopedResult.found ? "full" : "none" };
 }

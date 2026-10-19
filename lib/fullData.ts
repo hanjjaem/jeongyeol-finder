@@ -29,12 +29,18 @@ export type FullRecord = {
   issues: string[];
 };
 
-import rows from "./fullData.generated";
+import departments from "./fullDepartments.generated";
 
-export function getFullRecords(): FullRecord[] {
-  return rows as FullRecord[];
+// 전체 원문(2MB+)은 별도 청크로 분리해 첫 화면 로딩을 막지 않는다.
+let _records: Promise<FullRecord[]> | null = null;
+export function loadFullRecords(): Promise<FullRecord[]> {
+  if (!_records) {
+    _records = import("./fullData.generated").then((module) => module.default as FullRecord[]);
+    _records.catch(() => { _records = null; }); // 네트워크 실패 시 다음 검색에서 다시 받는다
+  }
+  return _records;
 }
 
 export function getDepartments(): string[] {
-  return [...new Set(getFullRecords().map((record) => record.department_scope))];
+  return departments;
 }

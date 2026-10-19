@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { getDepartments } from "../lib/fullData";
+import { useEffect, useState } from "react";
+import { getDepartments, loadFullRecords } from "../lib/fullData";
 import { lookup, type SourceEvidence } from "../lib/lookup";
 
 type Option = { label: string; approver: string; drafter?: string; note?: string; evidence?: SourceEvidence };
@@ -37,6 +37,9 @@ export default function Home() {
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [chosen, setChosen] = useState<number | null>(null);
+
+  // 첫 화면을 그린 뒤 전체 원문을 미리 받아 첫 검색 지연을 줄인다(실패하면 검색 시 다시 시도).
+  useEffect(() => { loadFullRecords().catch(() => {}); }, []);
 
   async function search(q?: string) {
     const text = (q ?? query).trim();
